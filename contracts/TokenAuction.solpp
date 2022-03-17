@@ -1,0 +1,86 @@
+// SPDX-License-Identifier: MIT
+/// @title Token Auction implementation for GR13 Hackathon
+/// @author Samuele Marro
+
+pragma soliditypp ^0.8.0;
+
+struct Bid {
+    uint256 amount;
+    uint256 price;
+    address bidder;
+    uint256 bidId; // TODO: Remove?
+}
+
+struct Auction {
+    vitetoken tokenId;
+    uint256 endTimestamp;
+    mapping(address => uint256) addressToBidId;
+    mapping(uint256 => Bid) bids;
+    uint256 numBids;
+}
+
+contract TokenAuction {
+    mapping(uint256 => Auction) private auctions;
+    uint256 public numAuctions;
+
+    function createAuction(vitetoken _tokenId, uint256 _amount, uint256 _endTimestamp) external payable {
+        require(_endTimestamp > block.timestamp, "TokenAuction: end timestamp must be in the future");
+        require(msg.token == _tokenId, "TokenAuction: token ID mismatch");
+        require(msg.value == _amount, "TokenAuction: _amount must be equal to msg.value");
+
+        uint256 auctionId = numAuctions++;
+        auctions[auctionId].tokenId = _tokenId;
+        auctions[auctionId].endTimestamp = _endTimestamp;
+    }
+
+    function _bidExists(uint256 _auctionId, address _bidder) internal view returns (bool) {
+        return auctions[_auctionId].addressToBidId[_bidder] != 0;
+    }
+
+    function bid(uint256 _auctionId, uint256 _amount, uint256 _price) external payable {
+        require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
+        require(_price > 0, "TokenAuction: price must be positive");
+        require(_amount > 0, "TokenAuction: amount must be positive");
+        require(auctions[_auctionId].endTimestamp > block.timestamp, "TokenAuction: auction has already ended");
+
+        require(auctions[_auctionId].tokenId == msg.token, "TokenAuction: token ID mismatch");
+
+        if (_bidExists(_auctionId, msg.sender)) {
+            // Bid already exists, update bid
+            uint256 bidId = auctions[_auctionId].addressToBidId[msg.sender];
+
+            uint256 currentBidTotal = auctions[_auctionId].bids[bidId].amount * auctions[_auctionId].bids[bidId].price;
+            uint256 newBidTotal = _amount * _price;
+
+            if (newBidTotal > currentBidTotal) {
+                // Bid is higher than current bid
+                require(msg.value == newBidTotal - currentBidTotal, "TokenAuction: msg.value must be equal to new bid total - current bid total");
+            }
+
+            auctions[_auctionId].bids[bidId].amount = _amount;
+            auctions[_auctionId].bids[bidId].price = _price;
+
+            if (newBidTotal < currentBidTotal) {
+                // Bid is higher than current bid
+                // Executed later to avoid re-entrancy attacks
+                payable(msg.sender).transfer(auctions[_auctionId].tokenId, newBidTotal - currentBidTotal);
+            }
+        } else {
+            // Bid does not exist, create new bid
+            uint256 bidId = auctions[_auctionId].numBids++;
+            require(msg.value == _amount * _price, "TokenAuction: transaction value must be equal to bid amount * bid price");
+            auctions[_auctionId].addressToBidId[msg.sender] = bidId;
+            auctions[_auctionId].bids[bidId].bidder = msg.sender;
+            auctions[_auctionId].bids[bidId].amount = _amount;
+            auctions[_auctionId].bids[bidId].price = _price;
+            auctions[_auctionId].bids[bidId].bidId = bidId;
+        }
+    }
+
+    function collect(uint256 _auctionId) external {
+        require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
+        require(auctions[_auctionId].endTimestamp <= block.timestamp, "TokenAuction: auction is still in progress");
+
+        // TODO: Implement
+    }
+}
