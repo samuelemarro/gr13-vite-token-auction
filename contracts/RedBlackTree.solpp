@@ -82,7 +82,7 @@ library RedBlackTree {
         return self.nodes[key];
     }
 
-    function insert(Tree storage self, uint key, BidInfo[] memory bidInfos) internal {
+    function insert(Tree storage self, uint key, address _address, uint256 _amount) internal {
         require(key != EMPTY);
         require(!exists(self, key));
         uint cursor = EMPTY;
@@ -95,7 +95,12 @@ library RedBlackTree {
                 probe = self.nodes[probe].right;
             }
         }
-        self.nodes[key] = Node({parent: cursor, left: EMPTY, right: EMPTY, red: true, bidInfos: bidInfos});
+        self.nodes[key].parent = cursor;
+        self.nodes[key].left = EMPTY;
+        self.nodes[key].right = EMPTY;
+        self.nodes[key].red = true;
+        self.nodes[key].bidInfos.push(BidInfo(_address, _amount));
+
         if (cursor == EMPTY) {
             self.root = key;
         } else if (key < cursor) {

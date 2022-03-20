@@ -7,9 +7,7 @@ pragma soliditypp ^0.8.0;
 import "./RedBlackTree.solpp";
 
 library IndexedTree {
-    using RedBlackTree for RedBlackTree.Tree;
-    using RedBlackTree for RedBlackTree.Node;
-    using RedBlackTree for RedBlackTree.BidInfo;
+    using RedBlackTree for *;
     struct Tree {
         RedBlackTree.Tree bids;
 
@@ -88,9 +86,7 @@ library IndexedTree {
 
             node.bidInfos.push(RedBlackTree.BidInfo(_address, _amount));
         } else {
-            RedBlackTree.BidInfo[] memory newBidInfos = new RedBlackTree.BidInfo[](1);
-            newBidInfos[0] = RedBlackTree.BidInfo(_address, _amount);
-            self.bids.insert(_price, newBidInfos);
+            self.bids.insert(_price, _address, _amount);
         }
     }
     
@@ -113,7 +109,7 @@ library IndexedTree {
         // Update the bid price mapping
         self.bidPrice[_address] = _price;
     }
-
+    
     // Move the last element to the deleted spot.
     // Remove the last element.
     function _removeAtIndex(RedBlackTree.BidInfo[] storage array, uint256 index) private {

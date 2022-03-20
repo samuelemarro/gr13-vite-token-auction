@@ -12,13 +12,14 @@ contract TokenAuction {
     struct Auction {
         vitetoken tokenId;
         uint256 endTimestamp;
+        uint256 amount;
         IndexedTree.Tree bids;
     }
 
     mapping(uint256 => Auction) private auctions;
     uint256 public numAuctions;
-
-    function createAuction(vitetoken _tokenId, uint256 _amount, uint256 _endTimestamp) external payable {
+    
+    function createAuction(vitetoken _tokenId, uint256 _amount, uint256 _endTimestamp) external payable returns(uint256) {
         require(_endTimestamp > block.timestamp, "TokenAuction: end timestamp must be in the future");
         require(msg.token == _tokenId, "TokenAuction: token ID mismatch");
         require(msg.value == _amount, "TokenAuction: _amount must be equal to msg.value");
@@ -26,6 +27,24 @@ contract TokenAuction {
         uint256 auctionId = numAuctions++;
         auctions[auctionId].tokenId = _tokenId;
         auctions[auctionId].endTimestamp = _endTimestamp;
+        auctions[auctionId].amount = _amount;
+
+        return auctionId;
+    }
+
+    function auctionTokenId(uint256 _auctionId) external view returns(vitetoken) {
+        require(_auctionId < numAuctions, "TokenAuction: auction ID out of range");
+        return auctions[_auctionId].tokenId;
+    }
+
+    function auctionEndTimestamp(uint256 _auctionId) external view returns(uint256) {
+        require(_auctionId < numAuctions, "TokenAuction: auction ID out of range");
+        return auctions[_auctionId].endTimestamp;
+    }
+
+    function auctionAmount(uint256 _auctionId) external view returns(uint256) {
+        require(_auctionId < numAuctions, "TokenAuction: auction ID out of range");
+        return auctions[_auctionId].amount;
     }
 
     function _bidInfo(uint256 _auctionId, address _bidder) internal view returns (uint256, uint256) {
@@ -43,7 +62,7 @@ contract TokenAuction {
     function bidExists(uint256 _auctionId, address _bidder) external view returns (bool) {
         return _bidExists(_auctionId, _bidder);
     }
-
+    
     function bid(uint256 _auctionId, uint256 _amount, uint256 _price) external payable {
         require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
         require(_price > 0, "TokenAuction: price must be positive");
@@ -64,8 +83,8 @@ contract TokenAuction {
                 // Bid is higher than current bid
                 require(msg.value == newBidTotal - currentBidTotal, "TokenAuction: msg.value must be equal to new bid total - current bid total");
             }
-
-            auctions[_auctionId].bids.update(msg.sender, _amount, _price);
+            
+            auctions[_auctionId].bids.update(msg.sender, _price, _amount);
 
             if (newBidTotal < currentBidTotal) {
                 // Bid is higher than current bid
