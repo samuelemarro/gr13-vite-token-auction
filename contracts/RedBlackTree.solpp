@@ -6,12 +6,19 @@
 pragma solidity ^0.8.0;
 
 library RedBlackTree {
+    struct BidInfo {
+        address bidder;
+        uint256 amount;
+    }
 
     struct Node {
         uint parent;
         uint left;
         uint right;
         bool red;
+
+        // Bidding info
+        BidInfo[] bidInfos;
     }
 
     struct Tree {
@@ -70,12 +77,12 @@ library RedBlackTree {
     function getEmpty() internal pure returns (uint) {
         return EMPTY;
     }
-    function getNode(Tree storage self, uint key) internal view returns (uint _returnKey, uint _parent, uint _left, uint _right, bool _red) {
+    function getNode(Tree storage self, uint key) internal view returns (Node storage) {
         require(exists(self, key));
-        return(key, self.nodes[key].parent, self.nodes[key].left, self.nodes[key].right, self.nodes[key].red);
+        return self.nodes[key];
     }
 
-    function insert(Tree storage self, uint key) internal {
+    function insert(Tree storage self, uint key, BidInfo[] memory bidInfos) internal {
         require(key != EMPTY);
         require(!exists(self, key));
         uint cursor = EMPTY;
@@ -88,7 +95,7 @@ library RedBlackTree {
                 probe = self.nodes[probe].right;
             }
         }
-        self.nodes[key] = Node({parent: cursor, left: EMPTY, right: EMPTY, red: true});
+        self.nodes[key] = Node({parent: cursor, left: EMPTY, right: EMPTY, red: true, bidInfos: bidInfos});
         if (cursor == EMPTY) {
             self.root = key;
         } else if (key < cursor) {

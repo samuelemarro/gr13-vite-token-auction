@@ -1,0 +1,126 @@
+// SPDX-License-Identifier: MIT
+/// @title Indexed (Red-Black) Tree
+/// @author Samuele Marro
+
+pragma soliditypp ^0.8.0;
+
+import "./RedBlackTree.solpp";
+
+library IndexedTree {
+    using RedBlackTree for RedBlackTree.Tree;
+    using RedBlackTree for RedBlackTree.Node;
+    using RedBlackTree for RedBlackTree.BidInfo;
+    struct Tree {
+        RedBlackTree.Tree bids;
+
+        // Additional mapping used to index bids by address
+        mapping(address => uint256) bidPrice;
+    }
+
+    function get(Tree storage self, address _address) internal view returns (uint256, uint256) {
+        uint256 bidPrice = self.bidPrice[_address];
+
+        RedBlackTree.Node storage node = self.bids.getNode(bidPrice);
+        for (uint256 i = 0; i < node.bidInfos.length; i++) {
+            if (node.bidInfos[i].bidder == _address) {
+                return (node.bidInfos[i].amount, bidPrice);
+            }
+        }
+
+        revert("Bid not found");
+    }
+
+    function exists(Tree storage self, address _address) internal view returns (bool) {
+        return self.bidPrice[_address] != 0;
+    }
+
+    function insert(Tree storage self, address _address, uint256 _amount, uint256 _price) internal {
+        require(!exists(self, _address), "Node already exists");
+
+        _insertBidInfo(self, _address, _amount, _price);
+
+        self.bidPrice[_address] = _price;
+    }
+
+    function updateAmount(Tree storage self, address _address, uint256 _amount) internal {
+        require(exists(self, _address), "Node does not exist");
+
+        uint256 bidPrice = self.bidPrice[_address];
+        RedBlackTree.Node storage node = self.bids.getNode(bidPrice);
+        for (uint256 i = 0; i < node.bidInfos.length; i++) {
+            if (node.bidInfos[i].bidder == _address) {
+                node.bidInfos[i].amount = _amount;
+                return;
+            }
+        }
+    }
+
+    function _removeBidInfo(Tree storage self, address _address) private returns(uint256) {
+        uint256 bidPrice = self.bidPrice[_address];
+        RedBlackTree.Node storage node = self.bids.getNode(bidPrice);
+        uint256 amount;
+
+        if (node.bidInfos.length == 1) {
+            // If the node has only one bid, delete it
+
+            amount = node.bidInfos[0].amount;
+            self.bids.remove(bidPrice);
+        } else {
+            // If the node has more than one bid, remove the bid of the address
+
+            for (uint256 i = 0; i < node.bidInfos.length; i++) {
+                if (node.bidInfos[i].bidder == _address) {
+                    amount = node.bidInfos[i].amount;
+                    _removeAtIndex(node.bidInfos, i);
+                    break;
+                }
+            }
+        }
+
+        return amount;
+    }
+
+    function _insertBidInfo(Tree storage self, address _address, uint256 _amount, uint256 _price) private {
+        RedBlackTree.Node storage node = self.bids.getNode(_price);
+        if (self.bids.exists(_price)) {
+            // Node already exists, append the bid
+            node = self.bids.getNode(_price);
+
+            node.bidInfos.push(RedBlackTree.BidInfo(_address, _amount));
+        } else {
+            RedBlackTree.BidInfo[] memory newBidInfos = new RedBlackTree.BidInfo[](1);
+            newBidInfos[0] = RedBlackTree.BidInfo(_address, _amount);
+            self.bids.insert(_price, newBidInfos);
+        }
+    }
+    
+    function update(Tree storage self, address _address, uint256 _price, uint256 _amount) internal {
+        require(exists(self, _address), "Node does not exist");
+
+        uint256 bidPrice = self.bidPrice[_address];
+
+        // If the price is the same, do nothing
+        if (bidPrice == _price) {
+            return;
+        }
+
+        _removeBidInfo(self, _address);
+
+        // Insert the new price
+
+        _insertBidInfo(self, _address, _amount, _price);
+
+        // Update the bid price mapping
+        self.bidPrice[_address] = _price;
+    }
+
+    // Move the last element to the deleted spot.
+    // Remove the last element.
+    function _removeAtIndex(RedBlackTree.BidInfo[] storage array, uint256 index) private {
+        // TODO: Shift instead of swap+delete
+        for (uint256 i = index; i < array.length - 1; i++) {
+            array[i] = array[i + 1];
+        }
+        array.pop();
+    }
+}

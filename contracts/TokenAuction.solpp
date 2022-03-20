@@ -4,22 +4,17 @@
 
 pragma soliditypp ^0.8.0;
 
-struct Bid {
-    uint256 amount;
-    uint256 price;
-    address bidder;
-    uint256 bidId; // TODO: Remove?
-}
-
-struct Auction {
-    vitetoken tokenId;
-    uint256 endTimestamp;
-    mapping(address => uint256) addressToBidId;
-    mapping(uint256 => Bid) bids;
-    uint256 numBids;
-}
+import "./IndexedTree.solpp";
 
 contract TokenAuction {
+    using IndexedTree for IndexedTree.Tree;
+
+    struct Auction {
+        vitetoken tokenId;
+        uint256 endTimestamp;
+        IndexedTree.Tree bids;
+    }
+
     mapping(uint256 => Auction) private auctions;
     uint256 public numAuctions;
 
@@ -33,8 +28,20 @@ contract TokenAuction {
         auctions[auctionId].endTimestamp = _endTimestamp;
     }
 
+    function _bidInfo(uint256 _auctionId, address _bidder) internal view returns (uint256, uint256) {
+        return auctions[_auctionId].bids.get(_bidder);
+    }
+
+    function bidInfo(uint256 _auctionId, address _bidder) external view returns (uint256, uint256) {
+        return _bidInfo(_auctionId, _bidder);
+    }
+
     function _bidExists(uint256 _auctionId, address _bidder) internal view returns (bool) {
-        return auctions[_auctionId].addressToBidId[_bidder] != 0;
+        return auctions[_auctionId].bids.exists(_bidder);
+    }
+
+    function bidExists(uint256 _auctionId, address _bidder) external view returns (bool) {
+        return _bidExists(_auctionId, _bidder);
     }
 
     function bid(uint256 _auctionId, uint256 _amount, uint256 _price) external payable {
@@ -46,19 +53,19 @@ contract TokenAuction {
         require(auctions[_auctionId].tokenId == msg.token, "TokenAuction: token ID mismatch");
 
         if (_bidExists(_auctionId, msg.sender)) {
-            // Bid already exists, update bid
-            uint256 bidId = auctions[_auctionId].addressToBidId[msg.sender];
-
-            uint256 currentBidTotal = auctions[_auctionId].bids[bidId].amount * auctions[_auctionId].bids[bidId].price;
             uint256 newBidTotal = _amount * _price;
+
+            uint256 currentAmount;
+            uint256 currentPrice;
+            (currentAmount, currentPrice) = _bidInfo(_auctionId, msg.sender);
+            uint256 currentBidTotal = currentAmount * currentPrice;
 
             if (newBidTotal > currentBidTotal) {
                 // Bid is higher than current bid
                 require(msg.value == newBidTotal - currentBidTotal, "TokenAuction: msg.value must be equal to new bid total - current bid total");
             }
 
-            auctions[_auctionId].bids[bidId].amount = _amount;
-            auctions[_auctionId].bids[bidId].price = _price;
+            auctions[_auctionId].bids.update(msg.sender, _amount, _price);
 
             if (newBidTotal < currentBidTotal) {
                 // Bid is higher than current bid
@@ -66,14 +73,7 @@ contract TokenAuction {
                 payable(msg.sender).transfer(auctions[_auctionId].tokenId, newBidTotal - currentBidTotal);
             }
         } else {
-            // Bid does not exist, create new bid
-            uint256 bidId = auctions[_auctionId].numBids++;
-            require(msg.value == _amount * _price, "TokenAuction: transaction value must be equal to bid amount * bid price");
-            auctions[_auctionId].addressToBidId[msg.sender] = bidId;
-            auctions[_auctionId].bids[bidId].bidder = msg.sender;
-            auctions[_auctionId].bids[bidId].amount = _amount;
-            auctions[_auctionId].bids[bidId].price = _price;
-            auctions[_auctionId].bids[bidId].bidId = bidId;
+            auctions[_auctionId].bids.insert(msg.sender, _amount, _price);
         }
     }
 
