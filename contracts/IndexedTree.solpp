@@ -79,10 +79,9 @@ library IndexedTree {
     }
 
     function _insertBidInfo(Tree storage self, address _address, uint256 _amount, uint256 _price) private {
-        RedBlackTree.Node storage node = self.bids.getNode(_price);
         if (self.bids.exists(_price)) {
             // Node already exists, append the bid
-            node = self.bids.getNode(_price);
+            RedBlackTree.Node storage node = self.bids.getNode(_price);
 
             node.bidInfos.push(RedBlackTree.BidInfo(_address, _amount));
         } else {
