@@ -18,9 +18,29 @@ contract TokenAuction {
 
     mapping(uint256 => Auction) private auctions;
     uint256 public numAuctions;
+
+    // Comment these lines to disable the time hack
+    //=====
+    uint256 internal _currentTime = 0;
+
+    function setTime(uint256 _time) external {
+        _currentTime = _time;
+    }
+
+    function _getTime() internal view returns (uint256) {
+        return _currentTime;
+    }
+    //=====
+
+    // Uncomment these lines to disable the time hack
+    //=====
+    //function _getTime() internal view returns (uint256) {
+    //    return block.timestamp;
+    //}
+    //=====
     
     function createAuction(vitetoken _tokenId, uint256 _amount, uint256 _endTimestamp) external payable returns(uint256) {
-        require(_endTimestamp > block.timestamp, "TokenAuction: end timestamp must be in the future");
+        require(_endTimestamp > _getTime(), "TokenAuction: end timestamp must be in the future");
         require(msg.token == _tokenId, "TokenAuction: token ID mismatch");
         require(msg.value == _amount, "TokenAuction: _amount must be equal to msg.value");
 
@@ -67,7 +87,7 @@ contract TokenAuction {
         require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
         require(_price > 0, "TokenAuction: price must be positive");
         require(_amount > 0, "TokenAuction: amount must be positive");
-        require(auctions[_auctionId].endTimestamp > block.timestamp, "TokenAuction: auction has already ended");
+        require(auctions[_auctionId].endTimestamp > _getTime(), "TokenAuction: auction has already ended");
 
         require(auctions[_auctionId].tokenId == msg.token, "TokenAuction: token ID mismatch");
 
@@ -98,7 +118,7 @@ contract TokenAuction {
 
     function collect(uint256 _auctionId) external {
         require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
-        require(auctions[_auctionId].endTimestamp <= block.timestamp, "TokenAuction: auction is still in progress");
+        require(auctions[_auctionId].endTimestamp <= _getTime(), "TokenAuction: auction is still in progress");
 
         // TODO: Implement
     }
