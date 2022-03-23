@@ -72,6 +72,8 @@ contract TokenAuction {
     }
 
     function bidInfo(uint256 _auctionId, address _bidder) external view returns (uint256, uint256) {
+        require(_auctionId < numAuctions, "TokenAuction: auction ID out of range");
+        require(_bidExists(_auctionId, _bidder), "TokenAuction: bid does not exist");
         return _bidInfo(_auctionId, _bidder);
     }
 
