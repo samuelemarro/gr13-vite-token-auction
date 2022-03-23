@@ -40,8 +40,7 @@ library IndexedTree {
         self.bidPrice[_address] = _price;
     }
 
-    function updateAmount(Tree storage self, address _address, uint256 _amount) internal {
-        require(exists(self, _address), "Node does not exist");
+    function _updateAmount(Tree storage self, address _address, uint256 _amount) private {
 
         uint256 bidPrice = self.bidPrice[_address];
         RedBlackTree.Node storage node = self.bids.getNode(bidPrice);
@@ -94,19 +93,18 @@ library IndexedTree {
 
         uint256 bidPrice = self.bidPrice[_address];
 
-        // If the price is the same, do nothing
         if (bidPrice == _price) {
-            return;
+            _updateAmount(self, _address, _amount);
+        } else {
+            _removeBidInfo(self, _address);
+
+            // Insert the new price
+
+            _insertBidInfo(self, _address, _amount, _price);
+
+            // Update the bid price mapping
+            self.bidPrice[_address] = _price;
         }
-
-        _removeBidInfo(self, _address);
-
-        // Insert the new price
-
-        _insertBidInfo(self, _address, _amount, _price);
-
-        // Update the bid price mapping
-        self.bidPrice[_address] = _price;
     }
     
     // Move the last element to the deleted spot.
