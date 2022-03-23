@@ -89,7 +89,7 @@ library IndexedTree {
         }
     }
     
-    function update(Tree storage self, address _address, uint256 _price, uint256 _amount) internal {
+    function update(Tree storage self, address _address, uint256 _amount, uint256 _price) internal {
         require(exists(self, _address), "Node does not exist");
 
         uint256 bidPrice = self.bidPrice[_address];

@@ -105,7 +105,7 @@ contract TokenAuction {
                 require(msg.value == newBidTotal - currentBidTotal, "TokenAuction: msg.value must be equal to new bid total - current bid total");
             }
             
-            auctions[_auctionId].bids.update(msg.sender, _price, _amount);
+            auctions[_auctionId].bids.update(msg.sender, _amount, _price);
 
             if (newBidTotal < currentBidTotal) {
                 // Bid is higher than current bid
