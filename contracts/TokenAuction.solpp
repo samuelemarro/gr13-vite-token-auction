@@ -111,7 +111,7 @@ contract TokenAuction {
             if (newBidTotal < currentBidTotal) {
                 // Bid is higher than current bid
                 // Executed later to avoid re-entrancy attacks
-                payable(msg.sender).transfer(auctions[_auctionId].tokenId, newBidTotal - currentBidTotal);
+                payable(msg.sender).transfer(auctions[_auctionId].tokenId, currentBidTotal - newBidTotal);
             }
         } else {
             auctions[_auctionId].bids.insert(msg.sender, _amount, _price);
