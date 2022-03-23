@@ -121,7 +121,7 @@ describe('test TokenAuction', function () {
             expect(await bob.balance()).to.be.deep.equal('999930');
         });
 
-        it.only('decreases the amount of a bid', async function() {
+        it('decreases the amount of a bid', async function() {
             await deployer.sendToken(alice.address, '1000000');
             await alice.receiveAll();
 
@@ -157,5 +157,78 @@ describe('test TokenAuction', function () {
             // 1000000 - 45 = 999955
             expect(await bob.balance()).to.be.deep.equal('999955');
         });
+
+        it('increases the price of a bid', async function() {
+            await deployer.sendToken(alice.address, '1000000');
+            await alice.receiveAll();
+
+            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
+
+            await deployer.sendToken(bob.address, '1000000');
+            await bob.receiveAll();
+
+            await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
+
+            expect(await contract.query('bidExists', [0, alice.address], {caller: alice})).to.be.deep.equal(['0']);
+            expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
+            expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '5']);
+
+            // 55 from Alice + 60 from Bob = 115
+            expect(await contract.balance()).to.be.deep.equal('115');
+            // 1000000 - 55 = 999945
+            expect(await alice.balance()).to.be.deep.equal('999945');
+            // 1000000 - 60 = 999940
+            expect(await bob.balance()).to.be.deep.equal('999940');
+
+            // 12 * 11 - 12 * 5 = 72
+            await contract.call('bid', [0, 12, 11], {caller: bob, amount: '72'});
+
+            expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
+            expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '11']);
+
+            // 55 from Alice + 132 from Bob = 187
+            expect(await contract.balance()).to.be.deep.equal('187');
+            // 1000000 - 55 = 999945
+            expect(await alice.balance()).to.be.deep.equal('999945');
+            // 1000000 - 70 = 999868
+            expect(await bob.balance()).to.be.deep.equal('999868');
+        });
+
+        it('decreases the price of a bid', async function() {
+            await deployer.sendToken(alice.address, '1000000');
+            await alice.receiveAll();
+
+            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
+
+            await deployer.sendToken(bob.address, '1000000');
+            await bob.receiveAll();
+
+            await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
+
+            expect(await contract.query('bidExists', [0, alice.address], {caller: alice})).to.be.deep.equal(['0']);
+            expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
+            expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '5']);
+
+            // 55 from Alice + 60 from Bob = 115
+            expect(await contract.balance()).to.be.deep.equal('115');
+            // 1000000 - 55 = 999945
+            expect(await alice.balance()).to.be.deep.equal('999945');
+            // 1000000 - 60 = 999940
+            expect(await bob.balance()).to.be.deep.equal('999940');
+
+            await contract.call('bid', [0, 12, 3], {caller: bob});
+            await bob.receiveAll();
+
+            expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
+            expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '3']);
+
+            // 55 from Alice + 36 from Bob = 91
+            expect(await contract.balance()).to.be.deep.equal('91');
+            // 1000000 - 55 = 999945
+            expect(await alice.balance()).to.be.deep.equal('999945');
+            // 1000000 - 36 = 999964
+            expect(await bob.balance()).to.be.deep.equal('999964');
+        });
+
     });
 });
