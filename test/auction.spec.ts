@@ -50,9 +50,11 @@ describe('test TokenAuction', function () {
         expect(contract.address).to.be.a('string');
     });
     describe('createAuction', function () {
-        it.only('creates a new auction', async function() {
+        it('creates a new auction', async function() {
             await deployer.sendToken(alice.address, '1000000');
-            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {from: alice.address, amount: '55'});
+            await alice.receiveAll();
+
+            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
             expect(await contract.query('auctionTokenId', [0])).to.be.deep.equal(['tti_5649544520544f4b454e6e40']);
             expect(await contract.query('auctionEndTimestamp', [0])).to.be.deep.equal(['222222']);
             expect(await contract.query('auctionAmount', [0])).to.be.deep.equal(['55']);
@@ -60,8 +62,20 @@ describe('test TokenAuction', function () {
     });
 
     describe('bid', function () {
-        it('bids on an auction', async function() {
+        it.only('bids on an auction', async function() {
+            await deployer.sendToken(alice.address, '1000000');
+            await alice.receiveAll();
 
+            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
+
+            await deployer.sendToken(bob.address, '1000000');
+            await bob.receiveAll();
+
+            await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
+
+            expect(await contract.query('bidExists', [0, alice.address], {caller: alice})).to.be.deep.equal(['0']);
+            expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
+            expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '5']);
         })
     });
 });
