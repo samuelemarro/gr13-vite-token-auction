@@ -91,8 +91,6 @@ contract TokenAuction {
         require(_amount > 0, "TokenAuction: amount must be positive");
         require(auctions[_auctionId].endTimestamp > _getTime(), "TokenAuction: auction has already ended");
 
-        require(auctions[_auctionId].tokenId == msg.token, "TokenAuction: token ID mismatch");
-
         if (_bidExists(_auctionId, msg.sender)) {
             uint256 newBidTotal = _amount * _price;
 
@@ -103,6 +101,7 @@ contract TokenAuction {
 
             if (newBidTotal > currentBidTotal) {
                 // Bid is higher than current bid
+                require(auctions[_auctionId].tokenId == msg.token, "TokenAuction: token ID mismatch");
                 require(msg.value == newBidTotal - currentBidTotal, "TokenAuction: msg.value must be equal to new bid total - current bid total");
             }
             
