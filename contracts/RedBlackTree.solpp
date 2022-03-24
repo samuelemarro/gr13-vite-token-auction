@@ -26,7 +26,7 @@ library RedBlackTree {
         mapping(uint => Node) nodes;
     }
 
-    uint private constant EMPTY = 0;
+    uint public constant EMPTY = 0;
 
     function first(Tree storage self) internal view returns (uint _key) {
         _key = self.root;

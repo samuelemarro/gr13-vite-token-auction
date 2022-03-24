@@ -5,9 +5,11 @@
 pragma soliditypp ^0.8.0;
 
 import "./IndexedTree.solpp";
+import "./RedBlackTree.solpp";
 
 contract TokenAuction {
     using IndexedTree for IndexedTree.Tree;
+    using RedBlackTree for RedBlackTree.BidInfo;
 
     event AuctionCreated (
         uint256 indexed auctionId,
@@ -134,6 +136,24 @@ contract TokenAuction {
         }
 
         emit Bid(_auctionId, msg.sender, _amount, _price);
+    }
+
+    function auctionBidders(uint256 _auctionId) external view returns (address[] memory) {
+        require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
+        
+        RedBlackTree.BidInfo[] memory bids = auctions[_auctionId].bids.getAll();
+        address[] memory bidders = new address[](bids.length);
+
+        for (uint256 i = 0; i < bids.length; i++) {
+            bidders[i] = bids[i].bidder;
+        }
+
+        return bidders;
+    }
+
+    function auctionNumBids(uint256 _auctionId) external view returns (uint256) {
+        require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
+        return auctions[_auctionId].bids.numBids();
     }
 
     function collect(uint256 _auctionId) external {

@@ -28,6 +28,44 @@ library IndexedTree {
         revert("Bid not found");
     }
 
+    function numBids(Tree storage self) internal view returns(uint256) {
+        uint256 count = 0;
+
+        uint256 nodeKey = self.bids.first();
+        if (nodeKey != RedBlackTree.EMPTY) {
+
+            do {
+                count += self.bids.getNode(nodeKey).bidInfos.length;
+                nodeKey = self.bids.next(nodeKey);
+            } while (nodeKey != RedBlackTree.EMPTY);
+        }
+
+        return count;
+    }
+    
+    function getAll(Tree storage self) internal view returns (RedBlackTree.BidInfo[] memory) {
+        uint256 nBids = numBids(self);
+        RedBlackTree.BidInfo[] memory bidInfos = new RedBlackTree.BidInfo[](nBids);
+
+
+        if (nBids != 0) {
+            uint256 count = 0;
+
+            uint256 nodeKey = self.bids.first();
+
+            do {
+                RedBlackTree.Node storage node = self.bids.getNode(nodeKey);
+                for (uint256 i = 0; i < node.bidInfos.length; i++) {
+                    bidInfos[count] = node.bidInfos[i];
+                    count++;
+                }
+
+                nodeKey = self.bids.next(nodeKey);
+            } while (nodeKey != RedBlackTree.EMPTY);
+        }
+        return bidInfos;
+    }
+
     function exists(Tree storage self, address _address) internal view returns (bool) {
         return self.bidPrice[_address] != 0;
     }
