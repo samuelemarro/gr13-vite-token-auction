@@ -9,6 +9,21 @@ import "./IndexedTree.solpp";
 contract TokenAuction {
     using IndexedTree for IndexedTree.Tree;
 
+    event AuctionCreated (
+        uint256 indexed auctionId,
+        vitetoken indexed tokenId,
+        address indexed seller,
+        uint256 amount,
+        uint256 endTimestamp
+    );
+
+    event Bid (
+        uint256 indexed auctionId,
+        address indexed bidder,
+        uint256 amount,
+        uint256 price
+    );
+
     struct Auction {
         vitetoken tokenId;
         uint256 endTimestamp;
@@ -48,6 +63,8 @@ contract TokenAuction {
         auctions[auctionId].tokenId = _tokenId;
         auctions[auctionId].endTimestamp = _endTimestamp;
         auctions[auctionId].amount = _amount;
+
+        emit AuctionCreated(auctionId, _tokenId, msg.sender, _amount, _endTimestamp);
 
         return auctionId;
     }
@@ -115,6 +132,8 @@ contract TokenAuction {
         } else {
             auctions[_auctionId].bids.insert(msg.sender, _amount, _price);
         }
+
+        emit Bid(_auctionId, msg.sender, _amount, _price);
     }
 
     function collect(uint256 _auctionId) external {
