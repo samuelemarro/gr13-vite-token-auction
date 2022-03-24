@@ -84,6 +84,8 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
 
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
+
             await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
 
             expect(await contract.query('bidExists', [0, alice.address], {caller: alice})).to.be.deep.equal(['0']);
@@ -96,6 +98,16 @@ describe('test TokenAuction', function () {
             expect(await alice.balance()).to.be.deep.equal('999945');
             // 1000000 - 60 = 999940
             expect(await bob.balance()).to.be.deep.equal('999940');
+
+            expect(await contract.query('auctionAmount', [0])).to.be.deep.equal(['55']);
+            expect(await contract.query('auctionEndTimestamp', [0])).to.be.deep.equal(['222222']);
+
+            expect(await contract.query('auctionTokenId', [0])).to.be.deep.equal(['tti_5649544520544f4b454e6e40']);
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['1']);
+            expect(await contract.query('auctionBidders', [0])).to.be.deep.equal([[bob.address]]);
+            expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([['12']]);
+            expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([['5']]);
 
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
@@ -115,7 +127,7 @@ describe('test TokenAuction', function () {
             ]);
         });
 
-        it.only('increases the amount of a bid', async function() {
+        it('increases the amount of a bid', async function() {
             await deployer.sendToken(alice.address, '1000000');
             await alice.receiveAll();
 
@@ -142,6 +154,11 @@ describe('test TokenAuction', function () {
 
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['14', '5']);
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['1']);
+            expect(await contract.query('auctionBidders', [0])).to.be.deep.equal([[bob.address]]);
+            expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([['14']]);
+            expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([['5']]);
 
             // 55 from Alice + 70 from Bob = 125
             expect(await contract.balance()).to.be.deep.equal('125');
@@ -201,6 +218,12 @@ describe('test TokenAuction', function () {
 
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['9', '5']);
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['1']);
+            expect(await contract.query('auctionBidders', [0])).to.be.deep.equal([[bob.address]]);
+            expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([['9']]);
+            expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([['5']]);
+
             await bob.receiveAll();
 
             // 55 from Alice + 45 from Bob = 100
@@ -234,7 +257,7 @@ describe('test TokenAuction', function () {
             ]);
         });
 
-        it('increases the price of a bid', async function() {
+        it.only('increases the price of a bid', async function() {
             await deployer.sendToken(alice.address, '1000000');
             await alice.receiveAll();
 
@@ -261,6 +284,11 @@ describe('test TokenAuction', function () {
 
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '11']);
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['1']);
+            expect(await contract.query('auctionBidders', [0])).to.be.deep.equal([[bob.address]]);
+            expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([['12']]);
+            expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([['11']]);
 
             // 55 from Alice + 132 from Bob = 187
             expect(await contract.balance()).to.be.deep.equal('187');
@@ -293,7 +321,7 @@ describe('test TokenAuction', function () {
             ]);
         });
 
-        it('decreases the price of a bid', async function() {
+        it.only('decreases the price of a bid', async function() {
             await deployer.sendToken(alice.address, '1000000');
             await alice.receiveAll();
 
@@ -320,6 +348,11 @@ describe('test TokenAuction', function () {
 
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '3']);
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['1']);
+            expect(await contract.query('auctionBidders', [0])).to.be.deep.equal([[bob.address]]);
+            expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([['12']]);
+            expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([['3']]);
 
             // 55 from Alice + 36 from Bob = 91
             expect(await contract.balance()).to.be.deep.equal('91');
@@ -352,7 +385,7 @@ describe('test TokenAuction', function () {
             ]);
         });
 
-        it.only('increases both the amount and price of a bid', async function() {
+        it('increases both the amount and price of a bid', async function() {
             await deployer.sendToken(alice.address, '1000000');
             await alice.receiveAll();
 
@@ -379,6 +412,11 @@ describe('test TokenAuction', function () {
 
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['14', '11']);
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['1']);
+            expect(await contract.query('auctionBidders', [0])).to.be.deep.equal([[bob.address]]);
+            expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([['14']]);
+            expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([['11']]);
 
             // 55 from Alice + 154 from Bob = 209
             expect(await contract.balance()).to.be.deep.equal('209');
@@ -439,6 +477,11 @@ describe('test TokenAuction', function () {
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['9', '3']);
 
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['1']);
+            expect(await contract.query('auctionBidders', [0])).to.be.deep.equal([[bob.address]]);
+            expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([['9']]);
+            expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([['3']]);
+
             // 55 from Alice + 27 from Bob = 82
             expect(await contract.balance()).to.be.deep.equal('82');
             // 1000000 - 55 = 999945
@@ -497,6 +540,11 @@ describe('test TokenAuction', function () {
             expect(await contract.query('bidExists', [0, alice.address], {caller: alice})).to.be.deep.equal(['0']);
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '5']);
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['1']);
+            expect(await contract.query('auctionBidders', [0])).to.be.deep.equal([[bob.address]]);
+            expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([['12']]);
+            expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([['5']]);
 
             // 55 from Alice + 60 from Bob = 115
             expect(await contract.balance()).to.be.deep.equal('115');

@@ -151,6 +151,32 @@ contract TokenAuction {
         return bidders;
     }
 
+    function auctionAmounts(uint256 _auctionId) external view returns (uint256[] memory) {
+        require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
+        
+        RedBlackTree.BidInfo[] memory bids = auctions[_auctionId].bids.getAll();
+        uint256[] memory amounts = new uint256[](bids.length);
+
+        for (uint256 i = 0; i < bids.length; i++) {
+            amounts[i] = bids[i].amount;
+        }
+
+        return amounts;
+    }
+
+    function auctionPrices(uint256 _auctionId) external view returns (uint256[] memory) {
+        require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
+        
+        RedBlackTree.BidInfo[] memory bids = auctions[_auctionId].bids.getAll();
+        uint256[] memory prices = new uint256[](bids.length);
+
+        for (uint256 i = 0; i < bids.length; i++) {
+            prices[i] = auctions[_auctionId].bids.getPrice(bids[i].bidder);
+        }
+
+        return prices;
+    }
+
     function auctionNumBids(uint256 _auctionId) external view returns (uint256) {
         require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
         return auctions[_auctionId].bids.numBids();

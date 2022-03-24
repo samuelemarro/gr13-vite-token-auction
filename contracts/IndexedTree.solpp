@@ -28,6 +28,10 @@ library IndexedTree {
         revert("Bid not found");
     }
 
+    function getPrice(Tree storage self, address _address) internal view returns (uint256) {
+        return self.bidPrice[_address];
+    }
+
     function numBids(Tree storage self) internal view returns(uint256) {
         uint256 count = 0;
 
