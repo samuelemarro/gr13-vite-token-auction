@@ -5,6 +5,7 @@ import chai from "chai";
 const vite = require('@vite/vuilder');
 import chaiAsPromised from "chai-as-promised";
 import config from "./vite.config.json";
+const { accountBlock : {createAccountBlock, ReceiveAccountBlockTask} } = require("@vite/vitejs");
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -17,7 +18,16 @@ let charlie: any;
 let contract: any;
 let mnemonicCounter = 1;
 
+const viteId = 'tti_5649544520544f4b454e6e40';
 const viteFullId = '000000000000000000000000000000000000000000005649544520544f4b454e';
+
+const toFull = (id : string) => {
+    const replacedId = id.replace('tti_', '00000000000000000000000000000000000000000000');
+    return replacedId.substring(0, replacedId.length - 4);
+}
+
+let testTokenId : any;
+const testFullId = () => toFull(testTokenId);
 
 const checkEvents = (result : any, correct : Array<Object>) => {
     expect(result).to.be.an('array').with.length(correct.length);
@@ -26,10 +36,59 @@ const checkEvents = (result : any, correct : Array<Object>) => {
     }
 }
 
+
+async function receiveIssuedTokens() {
+    const blockTask = new ReceiveAccountBlockTask({
+        address: deployer.address,
+        privateKey: deployer.privateKey,
+        provider
+    });
+    let resolveFunction : any;
+    const promiseFunction = (resolve : any) => {
+        resolveFunction = resolve;
+    };
+    blockTask.onSuccess((data : any) => {
+        resolveFunction(data);
+    });
+
+    blockTask.start();
+    return new Promise(promiseFunction);
+}
+
 describe('test TokenAuction', function () {
     before(async function() {
         provider = vite.localProvider();
         deployer = vite.newAccount(config.networks.local.mnemonic, 0);
+
+        const block = createAccountBlock("issueToken", {
+            address: deployer.address,
+            tokenName: "Test Token",
+            isReIssuable: true,
+            maxSupply: 10000000,
+            totalSupply: 10000000,
+            isOwnerBurnOnly: false,
+            decimals: 2,
+            tokenSymbol: "TEST",
+            provider,
+            privateKey: deployer.privateKey
+          })
+        
+        block.setProvider(provider);
+        block.setPrivateKey(deployer.privateKey);
+        await block.autoSend();
+
+        await deployer.receiveAll();
+        await receiveIssuedTokens();
+
+        //console.log(tokenResult);
+        const tokenInfoList = (
+            await provider.request("contract_getTokenInfoList", 0, 1000)
+          ).tokenInfoList;
+        testTokenId = tokenInfoList.find(
+            (e : any) =>
+              e.tokenId !== viteFullId && e.owner === deployer.address
+        ).tokenId;
+        //testTokenId = tokenInfo.tokenId;
     })
     beforeEach(async function () {
         // init users
@@ -42,6 +101,7 @@ describe('test TokenAuction', function () {
         await bob.receiveAll();
         await deployer.sendToken(charlie.address, '0');
         await charlie.receiveAll();
+
         // compile
         const compiledContracts = await vite.compile('TokenAuction.solpp',);
         expect(compiledContracts).to.have.property('TokenAuction');
@@ -76,10 +136,10 @@ describe('test TokenAuction', function () {
 
     describe('bid', function () {
         it('bids on an auction', async function() {
-            await deployer.sendToken(alice.address, '1000000');
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -92,17 +152,20 @@ describe('test TokenAuction', function () {
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '5']);
 
-            // 55 from Alice + 60 from Bob = 115
-            expect(await contract.balance()).to.be.deep.equal('115');
+            // 60 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('60');
+
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 60 = 999940
-            expect(await bob.balance()).to.be.deep.equal('999940');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999940');
 
             expect(await contract.query('auctionAmount', [0])).to.be.deep.equal(['55']);
             expect(await contract.query('auctionEndTimestamp', [0])).to.be.deep.equal(['222222']);
 
-            expect(await contract.query('auctionTokenId', [0])).to.be.deep.equal(['tti_5649544520544f4b454e6e40']);
+            expect(await contract.query('auctionTokenId', [0])).to.be.deep.equal([testTokenId]);
 
             expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['1']);
             expect(await contract.query('auctionBidders', [0])).to.be.deep.equal([[bob.address]]);
@@ -113,7 +176,7 @@ describe('test TokenAuction', function () {
             checkEvents(events, [
                 {
                     '0': '0', auctionId: '0',
-                    '1': viteFullId, tokenId: viteFullId,
+                    '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
                     '4': '222222', endTimestamp: '222222'
@@ -128,13 +191,15 @@ describe('test TokenAuction', function () {
         });
 
         it('increases the amount of a bid', async function() {
-            await deployer.sendToken(alice.address, '1000000');
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
 
             await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
 
@@ -142,12 +207,14 @@ describe('test TokenAuction', function () {
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '5']);
 
-            // 55 from Alice + 60 from Bob = 115
-            expect(await contract.balance()).to.be.deep.equal('115');
+            // 60 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('60');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 60 = 999940
-            expect(await bob.balance()).to.be.deep.equal('999940');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999940');
 
             // 2 more tokens at a price of 5 Vite/token = 10 Vite
             await contract.call('bid', [0, 14, 5], {caller: bob, amount: '10'});
@@ -160,18 +227,20 @@ describe('test TokenAuction', function () {
             expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([['14']]);
             expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([['5']]);
 
-            // 55 from Alice + 70 from Bob = 125
-            expect(await contract.balance()).to.be.deep.equal('125');
+            // 70 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('70');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 70 = 999930
-            expect(await bob.balance()).to.be.deep.equal('999930');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999930');
 
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
                 {
                     '0': '0', auctionId: '0',
-                    '1': viteFullId, tokenId: viteFullId,
+                    '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
                     '4': '222222', endTimestamp: '222222'
@@ -192,13 +261,15 @@ describe('test TokenAuction', function () {
         });
 
         it('decreases the amount of a bid', async function() {
-            await deployer.sendToken(alice.address, '1000000');
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
 
             await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
 
@@ -206,12 +277,14 @@ describe('test TokenAuction', function () {
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '5']);
 
-            // 55 from Alice + 60 from Bob = 115
-            expect(await contract.balance()).to.be.deep.equal('115');
+            // 60 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('60');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 60 = 999940
-            expect(await bob.balance()).to.be.deep.equal('999940');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999940');
 
             // 3 less tokens at a price of 5 Vite/token = 15 Vite
             await contract.call('bid', [0, 9, 5], {caller: bob});
@@ -226,18 +299,20 @@ describe('test TokenAuction', function () {
 
             await bob.receiveAll();
 
-            // 55 from Alice + 45 from Bob = 100
-            expect(await contract.balance()).to.be.deep.equal('100');
+            // 45 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('45');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 45 = 999955
-            expect(await bob.balance()).to.be.deep.equal('999955');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999955');
 
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
                 {
                     '0': '0', auctionId: '0',
-                    '1': viteFullId, tokenId: viteFullId,
+                    '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
                     '4': '222222', endTimestamp: '222222'
@@ -258,13 +333,15 @@ describe('test TokenAuction', function () {
         });
 
         it('increases the price of a bid', async function() {
-            await deployer.sendToken(alice.address, '1000000');
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
 
             await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
 
@@ -272,12 +349,14 @@ describe('test TokenAuction', function () {
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '5']);
 
-            // 55 from Alice + 60 from Bob = 115
-            expect(await contract.balance()).to.be.deep.equal('115');
+            // 60 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('60');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 60 = 999940
-            expect(await bob.balance()).to.be.deep.equal('999940');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999940');
 
             // 12 * 11 - 12 * 5 = 72
             await contract.call('bid', [0, 12, 11], {caller: bob, amount: '72'});
@@ -290,18 +369,20 @@ describe('test TokenAuction', function () {
             expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([['12']]);
             expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([['11']]);
 
-            // 55 from Alice + 132 from Bob = 187
-            expect(await contract.balance()).to.be.deep.equal('187');
+            // 132 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('132');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 132 = 999868
-            expect(await bob.balance()).to.be.deep.equal('999868');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999868');
 
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
                 {
                     '0': '0', auctionId: '0',
-                    '1': viteFullId, tokenId: viteFullId,
+                    '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
                     '4': '222222', endTimestamp: '222222'
@@ -322,13 +403,15 @@ describe('test TokenAuction', function () {
         });
 
         it('decreases the price of a bid', async function() {
-            await deployer.sendToken(alice.address, '1000000');
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
 
             await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
 
@@ -336,12 +419,14 @@ describe('test TokenAuction', function () {
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '5']);
 
-            // 55 from Alice + 60 from Bob = 115
-            expect(await contract.balance()).to.be.deep.equal('115');
+            // 60 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('60');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 60 = 999940
-            expect(await bob.balance()).to.be.deep.equal('999940');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999940');
 
             await contract.call('bid', [0, 12, 3], {caller: bob});
             await bob.receiveAll();
@@ -354,18 +439,20 @@ describe('test TokenAuction', function () {
             expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([['12']]);
             expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([['3']]);
 
-            // 55 from Alice + 36 from Bob = 91
-            expect(await contract.balance()).to.be.deep.equal('91');
+            // 36 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('36');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 36 = 999964
-            expect(await bob.balance()).to.be.deep.equal('999964');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999964');
 
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
                 {
                     '0': '0', auctionId: '0',
-                    '1': viteFullId, tokenId: viteFullId,
+                    '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
                     '4': '222222', endTimestamp: '222222'
@@ -386,13 +473,15 @@ describe('test TokenAuction', function () {
         });
 
         it('increases both the amount and price of a bid', async function() {
-            await deployer.sendToken(alice.address, '1000000');
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
 
             await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
 
@@ -400,12 +489,14 @@ describe('test TokenAuction', function () {
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '5']);
 
-            // 55 from Alice + 60 from Bob = 115
-            expect(await contract.balance()).to.be.deep.equal('115');
+            // 60 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('60');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 60 = 999940
-            expect(await bob.balance()).to.be.deep.equal('999940');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999940');
 
             // 14 * 11 - 12 * 5 = 94
             await contract.call('bid', [0, 14, 11], {caller: bob, amount: '94'});
@@ -418,18 +509,20 @@ describe('test TokenAuction', function () {
             expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([['14']]);
             expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([['11']]);
 
-            // 55 from Alice + 154 from Bob = 209
-            expect(await contract.balance()).to.be.deep.equal('209');
+            // 154 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('154');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 154 = 999846
-            expect(await bob.balance()).to.be.deep.equal('999846');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999846');
 
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
                 {
                     '0': '0', auctionId: '0',
-                    '1': viteFullId, tokenId: viteFullId,
+                    '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
                     '4': '222222', endTimestamp: '222222'
@@ -450,13 +543,15 @@ describe('test TokenAuction', function () {
         });
 
         it('decreases both the amount and price of a bid', async function() {
-            await deployer.sendToken(alice.address, '1000000');
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
 
             await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
 
@@ -464,12 +559,14 @@ describe('test TokenAuction', function () {
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '5']);
 
-            // 55 from Alice + 60 from Bob = 115
-            expect(await contract.balance()).to.be.deep.equal('115');
+            // 60 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('60');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 60 = 999940
-            expect(await bob.balance()).to.be.deep.equal('999940');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999940');
 
             await contract.call('bid', [0, 9, 3], {caller: bob});
             await bob.receiveAll();
@@ -482,18 +579,20 @@ describe('test TokenAuction', function () {
             expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([['9']]);
             expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([['3']]);
 
-            // 55 from Alice + 27 from Bob = 82
-            expect(await contract.balance()).to.be.deep.equal('82');
+            // 27 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('27');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 27 = 999973
-            expect(await bob.balance()).to.be.deep.equal('999973');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999973');
 
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
                 {
                     '0': '0', auctionId: '0',
-                    '1': viteFullId, tokenId: viteFullId,
+                    '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
                     '4': '222222', endTimestamp: '222222'
@@ -514,13 +613,15 @@ describe('test TokenAuction', function () {
         });
 
         it('bids exactly the same', async function() {
-            await deployer.sendToken(alice.address, '1000000');
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
 
             await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
 
@@ -528,12 +629,14 @@ describe('test TokenAuction', function () {
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '5']);
 
-            // 55 from Alice + 60 from Bob = 115
-            expect(await contract.balance()).to.be.deep.equal('115');
+            // 60 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('60');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 60 = 999940
-            expect(await bob.balance()).to.be.deep.equal('999940');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999940');
 
             await contract.call('bid', [0, 12, 5], {caller: bob});
 
@@ -546,18 +649,20 @@ describe('test TokenAuction', function () {
             expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([['12']]);
             expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([['5']]);
 
-            // 55 from Alice + 60 from Bob = 115
-            expect(await contract.balance()).to.be.deep.equal('115');
+            // 60 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('60');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 60 = 999940
-            expect(await bob.balance()).to.be.deep.equal('999940');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999940');
 
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
                 {
                     '0': '0', auctionId: '0',
-                    '1': viteFullId, tokenId: viteFullId,
+                    '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
                     '4': '222222', endTimestamp: '222222'
@@ -579,14 +684,16 @@ describe('test TokenAuction', function () {
     });
 
     describe('cancelBid', function() {
-        it.only('cancels a bid', async function() {
-            await deployer.sendToken(alice.address, '1000000');
+        it('cancels a bid', async function() {
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
 
             await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
 
@@ -594,12 +701,14 @@ describe('test TokenAuction', function () {
             expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
             expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '5']);
 
-            // 55 from Alice + 60 from Bob = 115
-            expect(await contract.balance()).to.be.deep.equal('115');
+            // 60 from Bob
+            expect(await contract.balance(viteId)).to.be.deep.equal('60');
+            // 55 from Alice
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // 1000000 - 60 = 999940
-            expect(await bob.balance()).to.be.deep.equal('999940');
+            expect(await bob.balance(viteId)).to.be.deep.equal('999940');
 
             await contract.call('cancelBid', [0], {caller: bob});
             await bob.receiveAll();
@@ -622,7 +731,7 @@ describe('test TokenAuction', function () {
             checkEvents(events, [
                 {
                     '0': '0', auctionId: '0',
-                    '1': viteFullId, tokenId: viteFullId,
+                    '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
                     '4': '222222', endTimestamp: '222222'

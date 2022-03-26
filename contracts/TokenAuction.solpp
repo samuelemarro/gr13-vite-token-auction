@@ -11,6 +11,8 @@ contract TokenAuction {
     using IndexedTree for IndexedTree.Tree;
     using RedBlackTree for RedBlackTree.BidInfo;
 
+    vitetoken public constant VITE = "tti_5649544520544f4b454e6e40";
+
     event AuctionCreated (
         uint256 indexed auctionId,
         vitetoken indexed tokenId,
@@ -125,7 +127,7 @@ contract TokenAuction {
 
             if (newBidTotal > currentBidTotal) {
                 // Bid is higher than current bid
-                require(auctions[_auctionId].tokenId == msg.token, "TokenAuction: token ID mismatch");
+                require(msg.token == VITE, "TokenAuction: bid must be placed in VITE");
                 require(msg.value == newBidTotal - currentBidTotal, "TokenAuction: msg.value must be equal to new bid total - current bid total");
             }
             
@@ -134,7 +136,7 @@ contract TokenAuction {
             if (newBidTotal < currentBidTotal) {
                 // Bid is higher than current bid
                 // Executed later to avoid re-entrancy attacks
-                payable(msg.sender).transfer(auctions[_auctionId].tokenId, currentBidTotal - newBidTotal);
+                payable(msg.sender).transfer(VITE, currentBidTotal - newBidTotal);
             }
         } else {
             auctions[_auctionId].bids.insert(msg.sender, _amount, _price);
@@ -152,7 +154,7 @@ contract TokenAuction {
         (amount, price) = auctions[_auctionId].bids.remove(msg.sender);
 
         // Transfer the tokens back to the bidder
-        payable(msg.sender).transfer(auctions[_auctionId].tokenId, amount * price);
+        payable(msg.sender).transfer(VITE, amount * price);
 
         emit BidCancelled(_auctionId, msg.sender);
     }
