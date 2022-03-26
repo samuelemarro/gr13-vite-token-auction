@@ -77,7 +77,7 @@ library IndexedTree {
     function insert(Tree storage self, address _address, uint256 _amount, uint256 _price) internal {
         require(!exists(self, _address), "Node already exists");
 
-        _insertBidInfo(self, _address, _amount, _price);
+        _insertBidInfo(self, _address, _amount, _price, false);
 
         self.bidPrice[_address] = _price;
     }
@@ -87,15 +87,19 @@ library IndexedTree {
 
         uint256 price = self.bidPrice[_address];
 
-        uint256 amount = _removeBidInfo(self, _address);
+        uint256 amount;
+        bool collected;
+        (amount, collected) = _removeBidInfo(self, _address);
+
+        // Sanity check
+        require(!collected, "IndexedTree: removing collected bid");
 
         delete self.bidPrice[_address];
-        
+
         return (amount, price);
     }
 
     function _updateAmount(Tree storage self, address _address, uint256 _amount) private {
-
         uint256 bidPrice = self.bidPrice[_address];
         RedBlackTree.Node storage node = self.bids.getNode(bidPrice);
         for (uint256 i = 0; i < node.bidInfos.length; i++) {
@@ -106,15 +110,17 @@ library IndexedTree {
         }
     }
 
-    function _removeBidInfo(Tree storage self, address _address) private returns(uint256) {
+    function _removeBidInfo(Tree storage self, address _address) private returns(uint256, bool) {
         uint256 bidPrice = self.bidPrice[_address];
         RedBlackTree.Node storage node = self.bids.getNode(bidPrice);
         uint256 amount;
+        bool collected;
 
         if (node.bidInfos.length == 1) {
             // If the node has only one bid, delete it
 
             amount = node.bidInfos[0].amount;
+            collected = node.bidInfos[0].collected;
             self.bids.remove(bidPrice);
         } else {
             // If the node has more than one bid, remove the bid of the address
@@ -122,23 +128,25 @@ library IndexedTree {
             for (uint256 i = 0; i < node.bidInfos.length; i++) {
                 if (node.bidInfos[i].bidder == _address) {
                     amount = node.bidInfos[i].amount;
+                    collected = node.bidInfos[i].collected;
+                    
                     _removeAtIndex(node.bidInfos, i);
                     break;
                 }
             }
         }
 
-        return amount;
+        return (amount, collected);
     }
 
-    function _insertBidInfo(Tree storage self, address _address, uint256 _amount, uint256 _price) private {
+    function _insertBidInfo(Tree storage self, address _address, uint256 _amount, uint256 _price, bool _collected) private {
         if (self.bids.exists(_price)) {
             // Node already exists, append the bid
             RedBlackTree.Node storage node = self.bids.getNode(_price);
 
-            node.bidInfos.push(RedBlackTree.BidInfo(_address, _amount));
+            node.bidInfos.push(RedBlackTree.BidInfo(_address, _amount, _collected));
         } else {
-            self.bids.insert(_price, _address, _amount);
+            self.bids.insert(_price, _address, _amount, _collected);
         }
     }
     
@@ -150,11 +158,16 @@ library IndexedTree {
         if (bidPrice == _price) {
             _updateAmount(self, _address, _amount);
         } else {
-            _removeBidInfo(self, _address);
+            uint256 oldAmount;
+            bool collected;
+            (oldAmount, collected) = _removeBidInfo(self, _address);
+
+            // Sanity check
+            require(!collected, "IndexedTree: updating collected bid");
 
             // Insert the new price
 
-            _insertBidInfo(self, _address, _amount, _price);
+            _insertBidInfo(self, _address, _amount, _price, collected);
 
             // Update the bid price mapping
             self.bidPrice[_address] = _price;

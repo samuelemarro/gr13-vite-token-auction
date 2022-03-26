@@ -9,6 +9,7 @@ library RedBlackTree {
     struct BidInfo {
         address bidder;
         uint256 amount;
+        bool collected;
     }
 
     struct Node {
@@ -82,7 +83,7 @@ library RedBlackTree {
         return self.nodes[key];
     }
 
-    function insert(Tree storage self, uint key, address _address, uint256 _amount) internal {
+    function insert(Tree storage self, uint key, address _address, uint256 _amount, bool _collected) internal {
         require(key != EMPTY);
         require(!exists(self, key));
         uint cursor = EMPTY;
@@ -99,7 +100,7 @@ library RedBlackTree {
         self.nodes[key].left = EMPTY;
         self.nodes[key].right = EMPTY;
         self.nodes[key].red = true;
-        self.nodes[key].bidInfos.push(BidInfo(_address, _amount));
+        self.nodes[key].bidInfos.push(BidInfo(_address, _amount, _collected));
 
         if (cursor == EMPTY) {
             self.root = key;
@@ -320,6 +321,3 @@ library RedBlackTree {
         self.nodes[key].red = false;
     }
 }
-// ----------------------------------------------------------------------------
-// End - BokkyPooBah's Red-Black Tree Library
-// ----------------------------------------------------------------------------
