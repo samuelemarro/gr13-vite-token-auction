@@ -82,6 +82,18 @@ library IndexedTree {
         self.bidPrice[_address] = _price;
     }
 
+    function remove(Tree storage self, address _address) internal returns(uint256, uint256) {
+        require(exists(self, _address), "Node does not exist");
+
+        uint256 price = self.bidPrice[_address];
+
+        uint256 amount = _removeBidInfo(self, _address);
+
+        delete self.bidPrice[_address];
+        
+        return (amount, price);
+    }
+
     function _updateAmount(Tree storage self, address _address, uint256 _amount) private {
 
         uint256 bidPrice = self.bidPrice[_address];

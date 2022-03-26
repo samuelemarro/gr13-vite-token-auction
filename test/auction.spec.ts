@@ -257,7 +257,7 @@ describe('test TokenAuction', function () {
             ]);
         });
 
-        it.only('increases the price of a bid', async function() {
+        it('increases the price of a bid', async function() {
             await deployer.sendToken(alice.address, '1000000');
             await alice.receiveAll();
 
@@ -321,7 +321,7 @@ describe('test TokenAuction', function () {
             ]);
         });
 
-        it.only('decreases the price of a bid', async function() {
+        it('decreases the price of a bid', async function() {
             await deployer.sendToken(alice.address, '1000000');
             await alice.receiveAll();
 
@@ -577,4 +577,67 @@ describe('test TokenAuction', function () {
             ]);
         });
     });
+
+    describe('cancelBid', function() {
+        it.only('cancels a bid', async function() {
+            await deployer.sendToken(alice.address, '1000000');
+            await alice.receiveAll();
+
+            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
+
+            await deployer.sendToken(bob.address, '1000000');
+            await bob.receiveAll();
+
+            await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
+
+            expect(await contract.query('bidExists', [0, alice.address], {caller: alice})).to.be.deep.equal(['0']);
+            expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
+            expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '5']);
+
+            // 55 from Alice + 60 from Bob = 115
+            expect(await contract.balance()).to.be.deep.equal('115');
+            // 1000000 - 55 = 999945
+            expect(await alice.balance()).to.be.deep.equal('999945');
+            // 1000000 - 60 = 999940
+            expect(await bob.balance()).to.be.deep.equal('999940');
+
+            await contract.call('cancelBid', [0], {caller: bob});
+            await bob.receiveAll();
+
+            expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['0']);
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
+            expect(await contract.query('auctionBidders', [0])).to.be.deep.equal([[]]);
+            expect(await contract.query('auctionAmounts', [0])).to.be.deep.equal([[]]);
+            expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([[]]);
+
+            // 55 from Alice
+            expect(await contract.balance()).to.be.deep.equal('55');
+            // 1000000 - 55 = 999945
+            expect(await alice.balance()).to.be.deep.equal('999945');
+            // Original amount
+            expect(await bob.balance()).to.be.deep.equal('1000000');
+
+            const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
+            checkEvents(events, [
+                {
+                    '0': '0', auctionId: '0',
+                    '1': viteFullId, tokenId: viteFullId,
+                    '2': alice.address, seller: alice.address,
+                    '3': '55', amount: '55',
+                    '4': '222222', endTimestamp: '222222'
+                }, // Auction created
+                {
+                    '0': '0', auctionId: '0',
+                    '1': bob.address, bidder: bob.address,
+                    '2': '12', amount: '12',
+                    '3': '5', price: '5'
+                }, // Bob bids
+                {
+                    '0': '0', auctionId: '0',
+                    '1': bob.address, bidder: bob.address
+                } // Bob cancels bid
+            ]);
+        });
+    })
 });

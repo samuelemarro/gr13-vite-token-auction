@@ -26,6 +26,11 @@ contract TokenAuction {
         uint256 price
     );
 
+    event BidCancelled (
+        uint256 indexed auctionId,
+        address indexed bidder
+    );
+
     struct Auction {
         vitetoken tokenId;
         uint256 endTimestamp;
@@ -136,6 +141,20 @@ contract TokenAuction {
         }
 
         emit Bid(_auctionId, msg.sender, _amount, _price);
+    }
+
+    function cancelBid(uint256 _auctionId) external {
+        require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
+        require(auctions[_auctionId].endTimestamp > _getTime(), "TokenAuction: auction has already ended");
+
+        uint256 amount;
+        uint256 price;
+        (amount, price) = auctions[_auctionId].bids.remove(msg.sender);
+
+        // Transfer the tokens back to the bidder
+        payable(msg.sender).transfer(auctions[_auctionId].tokenId, amount * price);
+
+        emit BidCancelled(_auctionId, msg.sender);
     }
 
     function auctionBidders(uint256 _auctionId) external view returns (address[] memory) {
