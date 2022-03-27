@@ -64,8 +64,8 @@ describe('test TokenAuction', function () {
             address: deployer.address,
             tokenName: "Test Token",
             isReIssuable: true,
-            maxSupply: 10000000,
-            totalSupply: 10000000,
+            maxSupply: 100000000,
+            totalSupply: 100000000,
             isOwnerBurnOnly: false,
             decimals: 2,
             tokenSymbol: "TEST",
@@ -113,19 +113,25 @@ describe('test TokenAuction', function () {
     });
     describe('createAuction', function () {
         it('creates a new auction', async function() {
-            await deployer.sendToken(alice.address, '1000000');
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', ['tti_5649544520544f4b454e6e40', 55, 222222], {caller: alice, amount: '55'});
-            expect(await contract.query('auctionTokenId', [0])).to.be.deep.equal(['tti_5649544520544f4b454e6e40']);
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
+
+            await deployer.sendToken(bob.address, '1000000');
+            await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
+            expect(await contract.query('auctionTokenId', [0])).to.be.deep.equal([testTokenId]);
             expect(await contract.query('auctionEndTimestamp', [0])).to.be.deep.equal(['222222']);
             expect(await contract.query('auctionAmount', [0])).to.be.deep.equal(['55']);
+            expect(await contract.query('auctionMinPrice', [0])).to.be.deep.equal(['2']);
 
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
                 {
                     '0': '0', auctionId: '0',
-                    '1': viteFullId, tokenId: viteFullId,
+                    '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
                     '4': '222222', endTimestamp: '222222',
@@ -691,7 +697,7 @@ describe('test TokenAuction', function () {
             ]);
         });
 
-        it.only('fails to bid lower than the minimum price', async function() {
+        it('fails to bid lower than the minimum price', async function() {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
@@ -703,8 +709,24 @@ describe('test TokenAuction', function () {
             expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
 
             expect(
-                contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'})
-            ).to.be.eventually.rejectedWith('revert');
+                contract.call('bid', [0, 12, 1], {caller: bob, amount: '60'})
+            ).to.eventually.be.rejectedWith('revert');
+        });
+
+        it('fails to underpay a bid', async function() {
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
+            await alice.receiveAll();
+
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
+
+            await deployer.sendToken(bob.address, '1000000');
+            await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
+
+            expect(
+                contract.call('bid', [0, 12, 5], {caller: bob, amount: '59'})
+            ).to.eventually.be.rejectedWith('revert');
         });
     });
 
@@ -746,11 +768,11 @@ describe('test TokenAuction', function () {
             expect(await contract.query('auctionPrices', [0])).to.be.deep.equal([[]]);
 
             // 55 from Alice
-            expect(await contract.balance()).to.be.deep.equal('55');
+            expect(await contract.balance(testTokenId)).to.be.deep.equal('55');
             // 1000000 - 55 = 999945
-            expect(await alice.balance()).to.be.deep.equal('999945');
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
             // Original amount
-            expect(await bob.balance()).to.be.deep.equal('1000000');
+            expect(await bob.balance(viteId)).to.be.deep.equal('1000000');
 
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
@@ -1482,8 +1504,8 @@ describe('test TokenAuction', function () {
             await contract.call('setTime', [11111], {caller: alice});
 
             expect(
-                contract.query('collect', [0], {caller: bob})
-            ).to.be.eventually.rejectedWith('revert');
+                contract.call('collect', [0], {caller: bob})
+            ).to.eventually.be.rejectedWith('revert');
         });
 
         it('fails to collect twice', async function() {
@@ -1508,8 +1530,8 @@ describe('test TokenAuction', function () {
             await bob.receiveAll();
 
             expect(
-                contract.query('collect', [0], {caller: bob})
-            ).to.be.eventually.rejectedWith('revert');
+                contract.call('collect', [0], {caller: bob})
+            ).to.eventually.be.rejectedWith('revert');
         });
     })
 
