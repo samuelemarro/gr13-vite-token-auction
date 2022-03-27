@@ -91,9 +91,9 @@ library RedBlackTree {
         while (probe != EMPTY) {
             cursor = probe;
             if (key < probe) {
-                probe = self.nodes[probe].left;
+                probe = self.nodes[probe].right; // Swapped
             } else {
-                probe = self.nodes[probe].right;
+                probe = self.nodes[probe].left; // Swapped
             }
         }
         self.nodes[key].parent = cursor;
@@ -105,9 +105,9 @@ library RedBlackTree {
         if (cursor == EMPTY) {
             self.root = key;
         } else if (key < cursor) {
-            self.nodes[cursor].left = key;
+            self.nodes[cursor].right = key; // Swapped
         } else {
-            self.nodes[cursor].right = key;
+            self.nodes[cursor].left = key; // Swapped
         }
         insertFixup(self, key);
     }

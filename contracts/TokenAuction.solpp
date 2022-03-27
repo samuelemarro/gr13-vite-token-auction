@@ -33,11 +33,21 @@ contract TokenAuction {
         address indexed bidder
     );
 
+    event BidCollected (
+        uint256 indexed auctionId,
+        address indexed bidder,
+        uint256 amount,
+        uint256 price,
+        uint256 refund
+    );
+
     struct Auction {
         vitetoken tokenId;
         uint256 endTimestamp;
         uint256 amount;
         IndexedTree.Tree bids;
+        address seller;
+        bool sellerCollected;
     }
 
     mapping(uint256 => Auction) private auctions;
@@ -93,6 +103,10 @@ contract TokenAuction {
         return auctions[_auctionId].amount;
     }
 
+    function auctionExpired(uint256 _auctionId) public view returns(bool) {
+        return _getTime() >= auctions[_auctionId].endTimestamp;
+    }
+
     function _bidInfo(uint256 _auctionId, address _bidder) internal view returns (uint256, uint256) {
         return auctions[_auctionId].bids.get(_bidder);
     }
@@ -115,7 +129,8 @@ contract TokenAuction {
         require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
         require(_price > 0, "TokenAuction: price must be positive");
         require(_amount > 0, "TokenAuction: amount must be positive");
-        require(auctions[_auctionId].endTimestamp > _getTime(), "TokenAuction: auction has already ended");
+        require(_amount <= auctions[_auctionId].amount, "TokenAuction: bid amount exceeds auction amount");
+        require(!auctionExpired(_auctionId), "TokenAuction: auction has already ended");
 
         if (_bidExists(_auctionId, msg.sender)) {
             uint256 newBidTotal = _amount * _price;
@@ -147,7 +162,7 @@ contract TokenAuction {
 
     function cancelBid(uint256 _auctionId) external {
         require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
-        require(auctions[_auctionId].endTimestamp > _getTime(), "TokenAuction: auction has already ended");
+        require(!auctionExpired(_auctionId), "TokenAuction: auction has already ended");
 
         uint256 amount;
         uint256 price;
@@ -205,7 +220,37 @@ contract TokenAuction {
 
     function collect(uint256 _auctionId) external {
         require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
-        require(auctions[_auctionId].endTimestamp <= _getTime(), "TokenAuction: auction is still in progress");
+        require(auctionExpired(_auctionId), "TokenAuction: auction is still in progress");
+
+        uint256 amount;
+        uint256 actualAmount;
+        uint256 price;
+
+        (amount, actualAmount, price) = auctions[_auctionId].bids.collect(msg.sender, auctions[_auctionId].amount);
+
+        uint256 refund;
+
+        if (actualAmount < amount) {
+            // Bidder did not bid high enough
+            refund = (amount - actualAmount) * price;
+        } else {
+            // Bidder bid high enough
+            refund = 0;
+        }
+
+        if (refund > 0) {
+            // Refunds the bidder
+            payable(msg.sender).transfer(VITE, refund);
+        }
+
+        if (actualAmount > 0) {
+            // Transfers the tokens to the winner
+            payable(msg.sender).transfer(auctions[_auctionId].tokenId, actualAmount);
+        }
+
+        emit BidCollected(_auctionId, msg.sender, actualAmount, price, refund);
+    }
+
 
         // TODO: Implement
     }
