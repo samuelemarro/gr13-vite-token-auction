@@ -923,7 +923,7 @@ describe('test TokenAuction', function () {
             ]);
         });
 
-        it.only('collects the result of a winner\'s bid when a total lower bid was placed', async function() {//
+        it('collects the result of a winner\'s bid when a total lower bid was placed', async function() {//
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
@@ -1019,7 +1019,7 @@ describe('test TokenAuction', function () {
             ]);
         });
 
-        it.only('collects the refund after being outbid', async function() {
+        it('collects the refund after being outbid', async function() {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
@@ -1115,7 +1115,7 @@ describe('test TokenAuction', function () {
             ]);
         });
 
-        it.only('collects the partial result of a winner\'s bid', async function() {
+        it('collects the partial result of a winner\'s bid', async function() {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
@@ -1212,4 +1212,79 @@ describe('test TokenAuction', function () {
             ]);
         });
     })
+
+    describe.only('collectSeller', function() {
+        // Note: most collectSeller tests are integrated with the collect tests
+        it('fails to collect without being the seller', async function() {
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
+            await alice.receiveAll();
+
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+
+            await deployer.sendToken(bob.address, '1000000');
+            await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
+
+            await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
+
+            await contract.call('setTime', [222223], {caller: alice});
+
+            expect(await contract.query('auctionExpired', [0], {caller: alice})).to.be.deep.equal(['1']);
+
+            expect(
+                contract.call('collectSeller', [0], {caller: bob})
+            ).to.be.rejectedWith('revert');
+        });
+
+        it('fails to collect before the expiration timestamp', async function() {
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
+            await alice.receiveAll();
+
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+
+            await deployer.sendToken(bob.address, '1000000');
+            await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
+
+            await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
+
+            await contract.call('setTime', [222223], {caller: alice});
+
+            expect(await contract.query('auctionExpired', [0], {caller: alice})).to.be.deep.equal(['1']);
+
+            expect(
+                contract.call('collectSeller', [0], {caller: alice})
+            ).to.be.rejectedWith('revert');
+        });
+
+        it.only('fails to collect twice', async function() {
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
+            await alice.receiveAll();
+
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+
+            await deployer.sendToken(bob.address, '1000000');
+            await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
+
+            await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
+
+            await contract.call('setTime', [222223], {caller: alice});
+
+            expect(await contract.query('auctionExpired', [0], {caller: alice})).to.be.deep.equal(['1']);
+
+            await contract.call('collect', [0], {caller: bob});
+            await bob.receiveAll();
+
+            await contract.call('collectSeller', [0], {caller: alice});
+            await alice.receiveAll();
+
+            expect(
+                contract.call('collectSeller', [0], {caller: alice})
+            ).to.be.rejectedWith('revert');
+        });
+    });
 });
