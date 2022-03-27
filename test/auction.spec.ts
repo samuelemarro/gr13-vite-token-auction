@@ -789,6 +789,14 @@ describe('test TokenAuction', function () {
             // VITE balance didn't change
             expect(await bob.balance(viteId)).to.be.deep.equal('999940');
 
+            await contract.call('collectSeller', [0], {caller: alice});
+            await alice.receiveAll();
+
+            // Received 33 test-tokens as refund
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999988');
+            // Received 60 VITE as payment
+            expect(await alice.balance(viteId)).to.be.deep.equal('60');
+
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
                 {
@@ -810,7 +818,13 @@ describe('test TokenAuction', function () {
                     '2': '12', amount: '12',
                     '3': '5', price: '5',
                     '4': '0', refund: '0'
-                } // Bob collects
+                }, // Bob collects
+                {
+                    '0': '0', auctionId: '0',
+                    '1': alice.address, seller: alice.address,
+                    '2': '60', payment: '60',
+                    '3': '43', tokenRefund: '43'
+                } // Alice collects bid results
             ]);
         });
 
@@ -857,6 +871,14 @@ describe('test TokenAuction', function () {
             // VITE balance didn't change (1000000 - 240 = 999760)
             expect(await charlie.balance(viteId)).to.be.deep.equal('999760');
 
+            await contract.call('collectSeller', [0], {caller: alice});
+            await alice.receiveAll();
+
+            // Received 55 - (24 + 12) = 19 test-tokens as refund
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999964');
+            // Received 12 * 5 + 24 * 10 = 300 VITE as payment
+            expect(await alice.balance(viteId)).to.be.deep.equal('300');
+
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
                 {
@@ -891,11 +913,17 @@ describe('test TokenAuction', function () {
                     '2': '24', amount: '24',
                     '3': '10', price: '10',
                     '4': '0', refund: '0'
-                } // Charlie collects
+                }, // Charlie collects
+                {
+                    '0': '0', auctionId: '0',
+                    '1': alice.address, seller: alice.address,
+                    '2': '300', payment: '300',
+                    '3': '19', tokenRefund: '19'
+                } // Alice collects bid results
             ]);
         });
 
-        it('collects the result of a winner\'s bid when a total lower bid was placed', async function() {//
+        it.only('collects the result of a winner\'s bid when a total lower bid was placed', async function() {//
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
@@ -923,8 +951,6 @@ describe('test TokenAuction', function () {
 
             expect(await contract.query('auctionExpired', [0], {caller: alice})).to.be.deep.equal(['1']);
 
-            //expect(await contract.query('collectAmounts', [0], {caller: bob})).to.be.deep.equal([['0']]);
-            //return;
             await contract.call('collect', [0], {caller: bob});
             await bob.receiveAll();
 
@@ -940,6 +966,14 @@ describe('test TokenAuction', function () {
             expect(await charlie.balance(testTokenId)).to.be.deep.equal('43');
             // Received 12 * 2 = 24 as refund
             expect(await charlie.balance(viteId)).to.be.deep.equal('999914');
+
+            await contract.call('collectSeller', [0], {caller: alice});
+            await alice.receiveAll();
+
+            // Received no refund
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
+            // Received 12 * 5 + 43 * 2 = 146 VITE as payment
+            expect(await alice.balance(viteId)).to.be.deep.equal('146');
 
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
@@ -975,11 +1009,17 @@ describe('test TokenAuction', function () {
                     '2': '43', amount: '43',
                     '3': '2', price: '2',
                     '4': '24', refund: '24'
-                } // Charlie collects
+                }, // Charlie collects
+                {
+                    '0': '0', auctionId: '0',
+                    '1': alice.address, seller: alice.address,
+                    '2': '146', payment: '146',
+                    '3': '0', tokenRefund: '0'
+                } // Alice collects bid results
             ]);
         });
 
-        it('collects the refund after being outbid', async function() {//
+        it.only('collects the refund after being outbid', async function() {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
@@ -1023,6 +1063,14 @@ describe('test TokenAuction', function () {
             // VITE balance didn't change (1000000 - 550 = 999450)
             expect(await charlie.balance(viteId)).to.be.deep.equal('999450');
 
+            await contract.call('collectSeller', [0], {caller: alice});
+            await alice.receiveAll();
+
+            // Received no refund
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
+            // Received 0 * 5 + 55 * 10 = 550 VITE as payment
+            expect(await alice.balance(viteId)).to.be.deep.equal('550');
+
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
                 {
@@ -1057,11 +1105,17 @@ describe('test TokenAuction', function () {
                     '2': '55', amount: '55',
                     '3': '10', price: '10',
                     '4': '0', refund: '0'
-                } // Charlie collects
+                }, // Charlie collects
+                {
+                    '0': '0', auctionId: '0',
+                    '1': alice.address, seller: alice.address,
+                    '2': '550', payment: '550',
+                    '3': '0', tokenRefund: '0'
+                } // Alice collects bid results
             ]);
         });
 
-        it('collects the partial result of a winner\'s bid', async function() {//
+        it.only('collects the partial result of a winner\'s bid', async function() {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
@@ -1106,6 +1160,14 @@ describe('test TokenAuction', function () {
             // VITE balance didn't change (1000000 - 520)
             expect(await charlie.balance(viteId)).to.be.deep.equal('999480');
 
+            await contract.call('collectSeller', [0], {caller: alice});
+            await alice.receiveAll();
+
+            // Received no refund
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
+            // Received 3 * 5 + 52 * 10 = 535 VITE as payment
+            expect(await alice.balance(viteId)).to.be.deep.equal('535');
+
             const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
             checkEvents(events, [
                 {
@@ -1140,7 +1202,13 @@ describe('test TokenAuction', function () {
                     '2': '52', amount: '52',
                     '3': '10', price: '10',
                     '4': '0', refund: '0'
-                } // Charlie collects
+                }, // Charlie collects
+                {
+                    '0': '0', auctionId: '0',
+                    '1': alice.address, seller: alice.address,
+                    '2': '535', payment: '535',
+                    '3': '0', tokenRefund: '0'
+                } // Alice collects bid results
             ]);
         });
     })

@@ -173,7 +173,7 @@ library IndexedTree {
             self.bidPrice[_address] = _price;
         }
     }
-    
+
     function collect(Tree storage self, address _address, uint256 _maxAmount) internal returns (uint256, uint256, uint256) {
         require(exists(self, _address), "IndexedTree: node does not exist");
         uint256 soldAmount = 0;
@@ -216,10 +216,43 @@ library IndexedTree {
         revert("IndexedTree: bid not found");
     }
 
+    function getSellerRevenue(Tree storage self, uint256 _maxAmount) internal view returns (uint256, uint256) {
+        uint256 soldAmount = 0;
+        uint256 totalPayment = 0;
+
+        uint256 nodeKey = self.bids.first();
+        if (nodeKey != RedBlackTree.EMPTY) {
+            do {
+                RedBlackTree.Node storage node = self.bids.getNode(nodeKey);
+                for (uint256 i = 0; i < node.bidInfos.length; i++) {
+                    uint256 remainingAmount;
+                    if (soldAmount < _maxAmount) {
+                        remainingAmount = _maxAmount - soldAmount;
+                    } else {
+                        remainingAmount = 0;
+                    }
+
+                    // Actual amount is the minimum between the amount of the bid and the remaining amount
+                    uint256 actualAmount;
+
+                    if (remainingAmount < node.bidInfos[i].amount) {
+                        actualAmount = remainingAmount;
+                    } else {
+                        actualAmount = node.bidInfos[i].amount;
+                    }
+                    soldAmount += actualAmount;
+                    totalPayment += actualAmount * self.bidPrice[node.bidInfos[i].bidder];
+                }
+                nodeKey = self.bids.next(nodeKey);
+            } while (nodeKey != RedBlackTree.EMPTY && soldAmount < _maxAmount);
+        }
+
+        return (soldAmount, totalPayment);
+    }
+    
     // Move the last element to the deleted spot.
     // Remove the last element.
     function _removeAtIndex(RedBlackTree.BidInfo[] storage array, uint256 index) private {
-        // TODO: Shift instead of swap+delete
         for (uint256 i = index; i < array.length - 1; i++) {
             array[i] = array[i + 1];
         }

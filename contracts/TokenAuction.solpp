@@ -33,12 +33,19 @@ contract TokenAuction {
         address indexed bidder
     );
 
-    event BidCollected (
+    event BidderCollected (
         uint256 indexed auctionId,
         address indexed bidder,
         uint256 amount,
         uint256 price,
         uint256 refund
+    );
+
+    event SellerCollected (
+        uint256 indexed auctionId,
+        address indexed seller,
+        uint256 payment,
+        uint256 tokenRefund
     );
 
     struct Auction {
@@ -80,8 +87,9 @@ contract TokenAuction {
 
         uint256 auctionId = numAuctions++;
         auctions[auctionId].tokenId = _tokenId;
-        auctions[auctionId].endTimestamp = _endTimestamp;
+        auctions[auctionId].seller = msg.sender;
         auctions[auctionId].amount = _amount;
+        auctions[auctionId].endTimestamp = _endTimestamp;
 
         emit AuctionCreated(auctionId, _tokenId, msg.sender, _amount, _endTimestamp);
 
@@ -131,6 +139,7 @@ contract TokenAuction {
         require(_amount > 0, "TokenAuction: amount must be positive");
         require(_amount <= auctions[_auctionId].amount, "TokenAuction: bid amount exceeds auction amount");
         require(!auctionExpired(_auctionId), "TokenAuction: auction has already ended");
+        require(msg.sender != auctions[_auctionId].seller, "TokenAuction: seller cannot bid");
 
         if (_bidExists(_auctionId, msg.sender)) {
             uint256 newBidTotal = _amount * _price;
@@ -248,10 +257,34 @@ contract TokenAuction {
             payable(msg.sender).transfer(auctions[_auctionId].tokenId, actualAmount);
         }
 
-        emit BidCollected(_auctionId, msg.sender, actualAmount, price, refund);
+        emit BidderCollected(_auctionId, msg.sender, actualAmount, price, refund);
     }
 
+    function collectSeller(uint256 _auctionId) external {
+        require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
+        require(auctionExpired(_auctionId), "TokenAuction: auction is still in progress");
+        require(msg.sender == auctions[_auctionId].seller, "TokenAuction: only the seller can collect");
+        require(!auctions[_auctionId].sellerCollected, "TokenAuction: seller already collected");
 
-        // TODO: Implement
+        uint256 soldAmount;
+        uint256 totalPayment;
+
+        (soldAmount, totalPayment) = auctions[_auctionId].bids.getSellerRevenue(auctions[_auctionId].amount);
+
+        auctions[_auctionId].sellerCollected = true;
+
+        uint256 tokenRefund = auctions[_auctionId].amount - soldAmount;
+        if (tokenRefund > 0) {
+            // Some tokens were not sold
+            
+            payable(msg.sender).transfer(auctions[_auctionId].tokenId, tokenRefund);
+        }
+
+        if (totalPayment > 0) {
+            // Transfers VITE to the seller
+            payable(msg.sender).transfer(VITE, totalPayment);
+        }
+
+        emit SellerCollected(_auctionId, msg.sender, totalPayment, tokenRefund);
     }
 }
