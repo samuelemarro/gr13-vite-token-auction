@@ -191,6 +191,8 @@ contract TokenAuction {
                 payable(msg.sender).transfer(VITE, currentBidTotal - newBidTotal);
             }
         } else {
+            require(msg.token == VITE, "TokenAuction: bid must be placed in VITE");
+            require(msg.value == _amount * _price, "TokenAuction: msg.value must be equal to _amount * _price");
             auctions[_auctionId].bids.insert(msg.sender, _amount, _price);
         }
 
