@@ -174,7 +174,7 @@ library IndexedTree {
         }
     }
 
-    function collect(Tree storage self, address _address, uint256 _maxAmount) internal returns (uint256, uint256, uint256) {
+    function _simulateCollect(Tree storage self, address _address, uint256 _maxAmount, bool revertIfCollected) private view returns (uint256, uint256, uint256) {
         require(exists(self, _address), "IndexedTree: node does not exist");
         uint256 soldAmount = 0;
 
@@ -184,10 +184,7 @@ library IndexedTree {
                 RedBlackTree.Node storage node = self.bids.getNode(nodeKey);
                 for (uint256 i = 0; i < node.bidInfos.length; i++) {
                     if (node.bidInfos[i].bidder == _address) {
-                        require(!node.bidInfos[i].collected, "IndexedTree: bid already collected");
-
-                        // Mark it as collected
-                        node.bidInfos[i].collected = true;
+                        require(!node.bidInfos[i].collected || !revertIfCollected, "IndexedTree: bid already collected");
 
                         uint256 remainingAmount;
                         if (soldAmount < _maxAmount) {
@@ -205,7 +202,7 @@ library IndexedTree {
                             actualAmount = node.bidInfos[i].amount;
                         }
 
-                        return (node.bidInfos[i].amount, actualAmount, self.bidPrice[_address]);
+                        return (nodeKey, i, actualAmount);
                     }
                     soldAmount += node.bidInfos[i].amount;
                 }
@@ -214,6 +211,31 @@ library IndexedTree {
         }
 
         revert("IndexedTree: bid not found");
+    }
+
+    function simulateCollect(Tree storage self, address _address, uint256 _maxAmount) internal view returns (uint256, uint256, uint256) {
+        uint256 nodeKey;
+        uint256 index;
+        uint256 actualAmount;
+        (nodeKey, index, actualAmount) = _simulateCollect(self, _address, _maxAmount, false);
+
+        RedBlackTree.Node storage node = self.bids.getNode(nodeKey);
+
+        return (node.bidInfos[index].amount, actualAmount, self.bidPrice[_address]);
+    }
+
+    function collect(Tree storage self, address _address, uint256 _maxAmount) internal returns (uint256, uint256, uint256) {
+        uint256 nodeKey;
+        uint256 index;
+        uint256 actualAmount;
+        (nodeKey, index, actualAmount) = _simulateCollect(self, _address, _maxAmount, true);
+
+        RedBlackTree.Node storage node = self.bids.getNode(nodeKey);
+
+        // Mark it as collected
+        node.bidInfos[index].collected = true;
+
+        return (node.bidInfos[index].amount, actualAmount, self.bidPrice[_address]);
     }
 
     function getSellerRevenue(Tree storage self, uint256 _maxAmount) internal view returns (uint256, uint256) {

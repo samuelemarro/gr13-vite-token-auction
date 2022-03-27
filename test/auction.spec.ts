@@ -781,6 +781,7 @@ describe('test TokenAuction', function () {
 
             expect(await contract.query('auctionExpired', [0], {caller: alice})).to.be.deep.equal(['1']);
 
+            expect(await contract.query('simulateCollect', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '0']);
             await contract.call('collect', [0], {caller: bob});
             await bob.receiveAll();
 
@@ -789,6 +790,7 @@ describe('test TokenAuction', function () {
             // VITE balance didn't change
             expect(await bob.balance(viteId)).to.be.deep.equal('999940');
 
+            expect(await contract.query('simulateCollectSeller', [0], {caller: alice})).to.be.deep.equal(['60', '43']);
             await contract.call('collectSeller', [0], {caller: alice});
             await alice.receiveAll();
 
@@ -855,6 +857,7 @@ describe('test TokenAuction', function () {
 
             expect(await contract.query('auctionExpired', [0], {caller: alice})).to.be.deep.equal(['1']);
 
+            expect(await contract.query('simulateCollect', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '0']);
             await contract.call('collect', [0], {caller: bob});
             await bob.receiveAll();
 
@@ -863,6 +866,7 @@ describe('test TokenAuction', function () {
             // VITE balance didn't change (1000000 - 60 = 999940)
             expect(await bob.balance(viteId)).to.be.deep.equal('999940');
 
+            expect(await contract.query('simulateCollect', [0, charlie.address], {caller: alice})).to.be.deep.equal(['24', '0']);
             await contract.call('collect', [0], {caller: charlie});
             await charlie.receiveAll();
 
@@ -871,6 +875,7 @@ describe('test TokenAuction', function () {
             // VITE balance didn't change (1000000 - 240 = 999760)
             expect(await charlie.balance(viteId)).to.be.deep.equal('999760');
 
+            expect(await contract.query('simulateCollectSeller', [0], {caller: alice})).to.be.deep.equal(['300', '19']);
             await contract.call('collectSeller', [0], {caller: alice});
             await alice.receiveAll();
 
@@ -923,7 +928,7 @@ describe('test TokenAuction', function () {
             ]);
         });
 
-        it('collects the result of a winner\'s bid when a total lower bid was placed', async function() {//
+        it('collects the result of a winner\'s bid when a total lower bid was placed', async function() {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
@@ -951,6 +956,7 @@ describe('test TokenAuction', function () {
 
             expect(await contract.query('auctionExpired', [0], {caller: alice})).to.be.deep.equal(['1']);
 
+            expect(await contract.query('simulateCollect', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '0']);
             await contract.call('collect', [0], {caller: bob});
             await bob.receiveAll();
 
@@ -959,6 +965,7 @@ describe('test TokenAuction', function () {
             // VITE balance didn't change (1000000 - 60 = 999940)
             expect(await bob.balance(viteId)).to.be.deep.equal('999940');
 
+            expect(await contract.query('simulateCollect', [0, charlie.address], {caller: alice})).to.be.deep.equal(['43', '24']);
             await contract.call('collect', [0], {caller: charlie});
             await charlie.receiveAll();
 
@@ -967,6 +974,7 @@ describe('test TokenAuction', function () {
             // Received 12 * 2 = 24 as refund
             expect(await charlie.balance(viteId)).to.be.deep.equal('999914');
 
+            expect(await contract.query('simulateCollectSeller', [0], {caller: alice})).to.be.deep.equal(['146', '0']);
             await contract.call('collectSeller', [0], {caller: alice});
             await alice.receiveAll();
 
@@ -1047,6 +1055,7 @@ describe('test TokenAuction', function () {
 
             expect(await contract.query('auctionExpired', [0], {caller: alice})).to.be.deep.equal(['1']);
 
+            expect(await contract.query('simulateCollect', [0, bob.address], {caller: alice})).to.be.deep.equal(['0', '60']);
             await contract.call('collect', [0], {caller: bob});
             await bob.receiveAll();
 
@@ -1055,6 +1064,7 @@ describe('test TokenAuction', function () {
             // Received 12 * 5 = 60 as refund
             expect(await bob.balance(viteId)).to.be.deep.equal('1000000');
 
+            expect(await contract.query('simulateCollect', [0, charlie.address], {caller: alice})).to.be.deep.equal(['55', '0']);
             await contract.call('collect', [0], {caller: charlie});
             await charlie.receiveAll();
 
@@ -1063,6 +1073,7 @@ describe('test TokenAuction', function () {
             // VITE balance didn't change (1000000 - 550 = 999450)
             expect(await charlie.balance(viteId)).to.be.deep.equal('999450');
 
+            expect(await contract.query('simulateCollectSeller', [0], {caller: alice})).to.be.deep.equal(['550', '0']);
             await contract.call('collectSeller', [0], {caller: alice});
             await alice.receiveAll();
 
@@ -1143,6 +1154,7 @@ describe('test TokenAuction', function () {
 
             expect(await contract.query('auctionExpired', [0], {caller: alice})).to.be.deep.equal(['1']);
 
+            expect(await contract.query('simulateCollect', [0, bob.address], {caller: alice})).to.be.deep.equal(['3', '45']);
             await contract.call('collect', [0], {caller: bob});
             await bob.receiveAll();
 
@@ -1152,6 +1164,7 @@ describe('test TokenAuction', function () {
             // Bob now has 1000000 - 5 * 3 = 999985
             expect(await bob.balance(viteId)).to.be.deep.equal('999985');
 
+            expect(await contract.query('simulateCollect', [0, charlie.address], {caller: alice})).to.be.deep.equal(['52', '0']);
             await contract.call('collect', [0], {caller: charlie});
             await charlie.receiveAll();
 
@@ -1160,6 +1173,7 @@ describe('test TokenAuction', function () {
             // VITE balance didn't change (1000000 - 520)
             expect(await charlie.balance(viteId)).to.be.deep.equal('999480');
 
+            expect(await contract.query('simulateCollectSeller', [0], {caller: alice})).to.be.deep.equal(['535', '0']);
             await contract.call('collectSeller', [0], {caller: alice});
             await alice.receiveAll();
 
@@ -1213,7 +1227,7 @@ describe('test TokenAuction', function () {
         });
     })
 
-    describe.only('collectSeller', function() {
+    describe('collectSeller', function() {
         // Note: most collectSeller tests are integrated with the collect tests
         it('fails to collect without being the seller', async function() {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
@@ -1259,7 +1273,7 @@ describe('test TokenAuction', function () {
             ).to.be.rejectedWith('revert');
         });
 
-        it.only('fails to collect twice', async function() {
+        it('fails to collect twice', async function() {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 

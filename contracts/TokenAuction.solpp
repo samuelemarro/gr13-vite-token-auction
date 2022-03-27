@@ -260,6 +260,33 @@ contract TokenAuction {
         emit BidderCollected(_auctionId, msg.sender, actualAmount, price, refund);
     }
 
+    /// @notice Simulates a call to "collect"
+    ///
+    /// @param _auctionId The auction id
+    /// @param _bidder The address of the bidder
+    ///
+    /// @return A tuple containing the actual received amount and the eventual refund
+    function simulateCollect(uint256 _auctionId, address _bidder) external returns (uint256, uint256) {
+        require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
+
+        uint256 amount;
+        uint256 actualAmount;
+        uint256 price;
+
+        (amount, actualAmount, price) = auctions[_auctionId].bids.collect(_bidder, auctions[_auctionId].amount);
+
+        uint256 refund;
+
+        if (actualAmount < amount) {
+            // Bidder did not bid high enough
+            refund = (amount - actualAmount) * price;
+        } else {
+            // Bidder bid high enough
+            refund = 0;
+        }
+
+        return (actualAmount, refund);
+    }
     function collectSeller(uint256 _auctionId) external {
         require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
         require(auctionExpired(_auctionId), "TokenAuction: auction is still in progress");
@@ -286,5 +313,23 @@ contract TokenAuction {
         }
 
         emit SellerCollected(_auctionId, msg.sender, totalPayment, tokenRefund);
+    }
+
+    /// @notice Simulates a call to "collectSeller"
+    ///
+    /// @param _auctionId The auction id
+    ///
+    /// @return A tuple containing the earnings and the eventual token refund
+    function simulateCollectSeller(uint256 _auctionId) external view returns (uint256, uint256) {
+        require(_auctionId < numAuctions, "TokenAuction: auction does not exist");
+
+        uint256 soldAmount;
+        uint256 totalPayment;
+
+        (soldAmount, totalPayment) = auctions[_auctionId].bids.getSellerRevenue(auctions[_auctionId].amount);
+
+        uint256 tokenRefund = auctions[_auctionId].amount - soldAmount;
+
+        return (totalPayment, tokenRefund);
     }
 }
