@@ -1225,6 +1225,259 @@ describe('test TokenAuction', function () {
                 } // Alice collects bid results
             ]);
         });
+
+        it('bids exactly the same price', async function() {
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
+            await alice.receiveAll();
+
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+
+            await deployer.sendToken(bob.address, '1000000');
+            await bob.receiveAll();
+
+            await deployer.sendToken(charlie.address, '1000000');
+            await charlie.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
+
+            await contract.call('bid', [0, 55, 5], {caller: bob, amount: '275'});
+            await contract.call('bid', [0, 55, 5], {caller: charlie, amount: '275'});
+
+            expect(await contract.query('bidExists', [0, alice.address], {caller: alice})).to.be.deep.equal(['0']);
+            expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
+            expect(await contract.query('bidExists', [0, charlie.address], {caller: alice})).to.be.deep.equal(['1']);
+            expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['55', '5']);
+            expect(await contract.query('bidInfo', [0, charlie.address], {caller: alice})).to.be.deep.equal(['55', '5']);
+
+            await contract.call('setTime', [222223], {caller: alice});
+
+            expect(await contract.query('auctionExpired', [0], {caller: alice})).to.be.deep.equal(['1']);
+
+            expect(await contract.query('simulateCollect', [0, bob.address], {caller: alice})).to.be.deep.equal(['55', '0']);
+            await contract.call('collect', [0], {caller: bob});
+            await bob.receiveAll();
+
+            // Received 55 from auction
+            expect(await bob.balance(testTokenId)).to.be.deep.equal('55');
+            // VITE balance didn't change (1000000 - 275 = 999725)
+            expect(await bob.balance(viteId)).to.be.deep.equal('999725');
+
+            expect(await contract.query('simulateCollect', [0, charlie.address], {caller: alice})).to.be.deep.equal(['0', '275']);
+            await contract.call('collect', [0], {caller: charlie});
+            await charlie.receiveAll();
+
+            // Received 0 from auction
+            expect(await charlie.balance(testTokenId)).to.be.deep.equal('0');
+            // Full refund
+            expect(await charlie.balance(viteId)).to.be.deep.equal('1000000');
+
+            expect(await contract.query('simulateCollectSeller', [0], {caller: alice})).to.be.deep.equal(['275', '0']);
+            await contract.call('collectSeller', [0], {caller: alice});
+            await alice.receiveAll();
+
+            // No refund
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
+            // Received 275 VITE as payment
+            expect(await alice.balance(viteId)).to.be.deep.equal('275');
+
+            const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
+            checkEvents(events, [
+                {
+                    '0': '0', auctionId: '0',
+                    '1': testFullId(), tokenId: testFullId(),
+                    '2': alice.address, seller: alice.address,
+                    '3': '55', amount: '55',
+                    '4': '222222', endTimestamp: '222222'
+                }, // Auction created
+                {
+                    '0': '0', auctionId: '0',
+                    '1': bob.address, bidder: bob.address,
+                    '2': '55', amount: '55',
+                    '3': '5', price: '5'
+                }, // Bob bids
+                {
+                    '0': '0', auctionId: '0',
+                    '1': charlie.address, bidder: charlie.address,
+                    '2': '55', amount: '55',
+                    '3': '5', price: '5'
+                }, // Charlie bids
+                {
+                    '0': '0', auctionId: '0',
+                    '1': bob.address, bidder: bob.address,
+                    '2': '55', amount: '55',
+                    '3': '5', price: '5',
+                    '4': '0', refund: '0'
+                }, // Bob collects
+                {
+                    '0': '0', auctionId: '0',
+                    '1': charlie.address, bidder: charlie.address,
+                    '2': '0', amount: '0',
+                    '3': '5', price: '5',
+                    '4': '275', refund: '275'
+                }, // Charlie collects
+                {
+                    '0': '0', auctionId: '0',
+                    '1': alice.address, seller: alice.address,
+                    '2': '275', payment: '275',
+                    '3': '0', tokenRefund: '0'
+                } // Alice collects bid results
+            ]);
+        });
+
+        it.only('re-bids exactly the same price', async function() {
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
+            await alice.receiveAll();
+
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+
+            await deployer.sendToken(bob.address, '1000000');
+            await bob.receiveAll();
+
+            await deployer.sendToken(charlie.address, '1000000');
+            await charlie.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
+
+            await contract.call('bid', [0, 55, 10], {caller: bob, amount: '550'});
+            await contract.call('bid', [0, 55, 5], {caller: charlie, amount: '275'});
+            await contract.call('bid', [0, 55, 5], {caller: bob});
+            await bob.receiveAll();
+
+            expect(await contract.query('bidExists', [0, alice.address], {caller: alice})).to.be.deep.equal(['0']);
+            expect(await contract.query('bidExists', [0, bob.address], {caller: alice})).to.be.deep.equal(['1']);
+            expect(await contract.query('bidExists', [0, charlie.address], {caller: alice})).to.be.deep.equal(['1']);
+            expect(await contract.query('bidInfo', [0, bob.address], {caller: alice})).to.be.deep.equal(['55', '5']);
+            expect(await contract.query('bidInfo', [0, charlie.address], {caller: alice})).to.be.deep.equal(['55', '5']);
+
+            await contract.call('setTime', [222223], {caller: alice});
+
+            expect(await contract.query('auctionExpired', [0], {caller: alice})).to.be.deep.equal(['1']);
+
+            // Since Bob re-bid later, he lost its priority
+
+            expect(await contract.query('simulateCollect', [0, bob.address], {caller: alice})).to.be.deep.equal(['0', '275']);
+            await contract.call('collect', [0], {caller: bob});
+            await bob.receiveAll();
+
+            // Received 0 from auction
+            expect(await bob.balance(testTokenId)).to.be.deep.equal('0');
+            // Full refund
+            expect(await bob.balance(viteId)).to.be.deep.equal('1000000');
+
+            expect(await contract.query('simulateCollect', [0, charlie.address], {caller: alice})).to.be.deep.equal(['55', '0']);
+            await contract.call('collect', [0], {caller: charlie});
+            await charlie.receiveAll();
+
+            // Received 55 from auction
+            expect(await charlie.balance(testTokenId)).to.be.deep.equal('55');
+            // VITE balance didn't change (1000000 - 275 = 999725)
+            expect(await charlie.balance(viteId)).to.be.deep.equal('999725');
+
+            expect(await contract.query('simulateCollectSeller', [0], {caller: alice})).to.be.deep.equal(['275', '0']);
+            await contract.call('collectSeller', [0], {caller: alice});
+            await alice.receiveAll();
+
+            // No refund
+            expect(await alice.balance(testTokenId)).to.be.deep.equal('999945');
+            // Received 275 VITE as payment
+            expect(await alice.balance(viteId)).to.be.deep.equal('275');
+
+            const events = await contract.getPastEvents('allEvents', {fromHeight: 0, toHeight: 100});
+            checkEvents(events, [
+                {
+                    '0': '0', auctionId: '0',
+                    '1': testFullId(), tokenId: testFullId(),
+                    '2': alice.address, seller: alice.address,
+                    '3': '55', amount: '55',
+                    '4': '222222', endTimestamp: '222222'
+                }, // Auction created
+                {
+                    '0': '0', auctionId: '0',
+                    '1': bob.address, bidder: bob.address,
+                    '2': '55', amount: '55',
+                    '3': '10', price: '10'
+                }, // Bob bids
+                {
+                    '0': '0', auctionId: '0',
+                    '1': charlie.address, bidder: charlie.address,
+                    '2': '55', amount: '55',
+                    '3': '5', price: '5'
+                }, // Charlie bids
+                {
+                    '0': '0', auctionId: '0',
+                    '1': bob.address, bidder: bob.address,
+                    '2': '55', amount: '55',
+                    '3': '5', price: '5'
+                }, // Bob bids again
+                {
+                    '0': '0', auctionId: '0',
+                    '1': bob.address, bidder: bob.address,
+                    '2': '0', amount: '0',
+                    '3': '5', price: '5',
+                    '4': '275', refund: '275'
+                }, // Bob collects
+                {
+                    '0': '0', auctionId: '0',
+                    '1': charlie.address, bidder: charlie.address,
+                    '2': '55', amount: '55',
+                    '3': '5', price: '5',
+                    '4': '0', refund: '0'
+                }, // Charlie collects
+                {
+                    '0': '0', auctionId: '0',
+                    '1': alice.address, seller: alice.address,
+                    '2': '275', payment: '275',
+                    '3': '0', tokenRefund: '0'
+                } // Alice collects bid results
+            ]);
+        });
+
+        it('fails to collect before the expiration', async function() {
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
+            await alice.receiveAll();
+
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+
+            await deployer.sendToken(bob.address, '1000000');
+            await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
+
+            await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
+
+            // Before the expiration
+            await contract.call('setTime', [11111], {caller: alice});
+
+            expect(
+                contract.query('collect', [0], {caller: bob})
+            ).to.be.eventually.rejectedWith('revert');
+        });
+
+        it('fails to collect twice', async function() {
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
+            await alice.receiveAll();
+
+            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+
+            await deployer.sendToken(bob.address, '1000000');
+            await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
+
+            await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
+
+            await contract.call('setTime', [222223], {caller: alice});
+
+            expect(await contract.query('auctionExpired', [0], {caller: alice})).to.be.deep.equal(['1']);
+
+            expect(await contract.query('simulateCollect', [0, bob.address], {caller: alice})).to.be.deep.equal(['12', '0']);
+            await contract.call('collect', [0], {caller: bob});
+            await bob.receiveAll();
+
+            expect(
+                contract.query('collect', [0], {caller: bob})
+            ).to.be.eventually.rejectedWith('revert');
+        });
     })
 
     describe('collectSeller', function() {
