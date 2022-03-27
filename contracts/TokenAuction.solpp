@@ -106,30 +106,46 @@ contract TokenAuction {
     }
 
     /// @notice Returns the token id of an auction
+    ///
+    /// @param _auctionId The auction id
+    ///
+    /// @dev Existence check has been removed to fit the contract into the standard size
     function auctionTokenId(uint256 _auctionId) external view returns(vitetoken) {
-        require(_auctionId < numAuctions, "TokenAuction: auction ID out of range");
         return auctions[_auctionId].tokenId;
+    }
+
+    /// @notice Returns the minimum price of an auction
+    ///
+    /// @param _auctionId The auction id
+    ///
+    /// @dev Existence check has been removed to fit the contract into the standard size
+    function auctionMinPrice(uint256 _auctionId) external view returns(uint256) {
+        return auctions[_auctionId].minPrice;
     }
 
     /// @notice Returns the end Unix timestamp of an auction
     ///
     /// @param _auctionId The auction id
+    ///
+    /// @dev Existence check has been removed to fit the contract into the standard size
     function auctionEndTimestamp(uint256 _auctionId) external view returns(uint256) {
-        require(_auctionId < numAuctions, "TokenAuction: auction ID out of range");
         return auctions[_auctionId].endTimestamp;
     }
 
     /// @notice Returns the auctioned amount of an auction
     ///
     /// @param _auctionId The auction id
+    ///
+    /// @dev Existence check has been removed to fit the contract into the standard size
     function auctionAmount(uint256 _auctionId) external view returns(uint256) {
-        require(_auctionId < numAuctions, "TokenAuction: auction ID out of range");
         return auctions[_auctionId].amount;
     }
 
     /// @notice Returns true if an auction has ended
     ///
     /// @param _auctionId The auction id
+    ///
+    /// @dev Existence check has been removed to fit the contract into the standard size
     function auctionExpired(uint256 _auctionId) public view returns(bool) {
         return _getTime() >= auctions[_auctionId].endTimestamp;
     }
@@ -144,20 +160,16 @@ contract TokenAuction {
     /// @param _bidder The bidder address
     function bidInfo(uint256 _auctionId, address _bidder) external view returns (uint256, uint256) {
         require(_auctionId < numAuctions, "TokenAuction: auction ID out of range");
-        require(_bidExists(_auctionId, _bidder), "TokenAuction: bid does not exist");
+        require(bidExists(_auctionId, _bidder), "TokenAuction: bid does not exist");
         return _bidInfo(_auctionId, _bidder);
-    }
-
-    function _bidExists(uint256 _auctionId, address _bidder) internal view returns (bool) {
-        return auctions[_auctionId].bids.exists(_bidder);
     }
 
     /// @notice Returns true if a bid exists
     ///
     /// @param _auctionId The auction id
     /// @param _bidder The bidder address
-    function bidExists(uint256 _auctionId, address _bidder) external view returns (bool) {
-        return _bidExists(_auctionId, _bidder);
+    function bidExists(uint256 _auctionId, address _bidder) public view returns (bool) {
+        return auctions[_auctionId].bids.exists(_bidder);
     }
 
     /// @notice Bids on an auction
@@ -174,7 +186,7 @@ contract TokenAuction {
         require(msg.sender != auctions[_auctionId].seller, "TokenAuction: seller cannot bid");
         require(_price >= auctions[_auctionId].minPrice, "TokenAuction: bid price must be greater than or equal to the minimum price");
 
-        if (_bidExists(_auctionId, msg.sender)) {
+        if (bidExists(_auctionId, msg.sender)) {
             uint256 newBidTotal = _amount * _price;
 
             uint256 currentAmount;
