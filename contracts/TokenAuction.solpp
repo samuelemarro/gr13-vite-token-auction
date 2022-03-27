@@ -18,7 +18,8 @@ contract TokenAuction {
         vitetoken indexed tokenId,
         address indexed seller,
         uint256 amount,
-        uint256 endTimestamp
+        uint256 endTimestamp,
+        uint256 minPrice
     );
 
     event Bid (
@@ -54,6 +55,7 @@ contract TokenAuction {
         uint256 amount;
         IndexedTree.Tree bids;
         address seller;
+        uint256 minPrice;
         bool sellerCollected;
     }
 
@@ -85,7 +87,8 @@ contract TokenAuction {
     /// @param _tokenId The token id to be auctioned
     /// @param _amount The amount to be auctioned
     /// @param _endTimestamp The Unix timestamp of when the auction ends
-    function createAuction(vitetoken _tokenId, uint256 _amount, uint256 _endTimestamp) external payable returns(uint256) {
+    /// @param _minPrice The minimum price per token
+    function createAuction(vitetoken _tokenId, uint256 _amount, uint256 _endTimestamp, uint256 _minPrice) external payable returns(uint256) {
         require(_endTimestamp > _getTime(), "TokenAuction: end timestamp must be in the future");
         require(msg.token == _tokenId, "TokenAuction: token ID mismatch");
         require(msg.value == _amount, "TokenAuction: _amount must be equal to msg.value");
@@ -95,8 +98,9 @@ contract TokenAuction {
         auctions[auctionId].seller = msg.sender;
         auctions[auctionId].amount = _amount;
         auctions[auctionId].endTimestamp = _endTimestamp;
+        auctions[auctionId].minPrice = _minPrice;
 
-        emit AuctionCreated(auctionId, _tokenId, msg.sender, _amount, _endTimestamp);
+        emit AuctionCreated(auctionId, _tokenId, msg.sender, _amount, _endTimestamp, _minPrice);
 
         return auctionId;
     }
@@ -168,6 +172,7 @@ contract TokenAuction {
         require(_amount <= auctions[_auctionId].amount, "TokenAuction: bid amount exceeds auction amount");
         require(!auctionExpired(_auctionId), "TokenAuction: auction has already ended");
         require(msg.sender != auctions[_auctionId].seller, "TokenAuction: seller cannot bid");
+        require(_price >= auctions[_auctionId].minPrice, "TokenAuction: bid price must be greater than or equal to the minimum price");
 
         if (_bidExists(_auctionId, msg.sender)) {
             uint256 newBidTotal = _amount * _price;

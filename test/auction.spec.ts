@@ -128,7 +128,8 @@ describe('test TokenAuction', function () {
                     '1': viteFullId, tokenId: viteFullId,
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 } // Auction created
             ]);
         });
@@ -139,7 +140,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -179,7 +180,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -194,7 +196,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -243,7 +245,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -264,7 +267,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -315,7 +318,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -336,7 +340,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -385,7 +389,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -406,7 +411,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -455,7 +460,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -476,7 +482,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -525,7 +531,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -546,7 +553,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -595,7 +602,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -616,7 +624,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -665,7 +673,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -681,6 +690,22 @@ describe('test TokenAuction', function () {
                 } // Bob bids again
             ]);
         });
+
+        it.only('fails to bid lower than the minimum price', async function() {
+            await deployer.sendToken(alice.address, '1000000', testTokenId);
+            await alice.receiveAll();
+
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
+
+            await deployer.sendToken(bob.address, '1000000');
+            await bob.receiveAll();
+
+            expect(await contract.query('auctionNumBids', [0])).to.be.deep.equal(['0']);
+
+            expect(
+                contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'})
+            ).to.be.eventually.rejectedWith('revert');
+        });
     });
 
     describe('cancelBid', function() {
@@ -688,7 +713,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -734,7 +759,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -755,7 +781,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -806,7 +832,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -834,7 +861,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -891,7 +918,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -932,7 +960,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -990,7 +1018,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -1031,7 +1060,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -1089,7 +1118,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -1130,7 +1160,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -1189,7 +1219,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -1230,7 +1261,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -1287,7 +1318,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -1324,11 +1356,11 @@ describe('test TokenAuction', function () {
             ]);
         });
 
-        it.only('re-bids exactly the same price', async function() {
+        it('re-bids exactly the same price', async function() {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -1389,7 +1421,8 @@ describe('test TokenAuction', function () {
                     '1': testFullId(), tokenId: testFullId(),
                     '2': alice.address, seller: alice.address,
                     '3': '55', amount: '55',
-                    '4': '222222', endTimestamp: '222222'
+                    '4': '222222', endTimestamp: '222222',
+                    '5': '2', minPrice: '2'
                 }, // Auction created
                 {
                     '0': '0', auctionId: '0',
@@ -1436,7 +1469,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -1457,7 +1490,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -1486,7 +1519,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -1508,7 +1541,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
@@ -1530,7 +1563,7 @@ describe('test TokenAuction', function () {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
-            await contract.call('createAuction', [testTokenId, 55, 222222], {caller: alice, amount: '55', tokenId: testTokenId});
+            await contract.call('createAuction', [testTokenId, 55, 222222, 2], {caller: alice, amount: '55', tokenId: testTokenId});
 
             await deployer.sendToken(bob.address, '1000000');
             await bob.receiveAll();
