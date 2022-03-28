@@ -1537,7 +1537,7 @@ describe('test TokenAuction', function () {
 
     describe('collectSeller', function() {
         // Note: most collectSeller tests are integrated with the collect tests
-        it('fails to collect without being the seller', async function() {
+        it('fails to collect (as a seller) without being the seller', async function() {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
@@ -1559,7 +1559,7 @@ describe('test TokenAuction', function () {
             ).to.be.rejectedWith('revert');
         });
 
-        it('fails to collect before the expiration timestamp', async function() {
+        it('fails to collect (as a seller) before the expiration timestamp', async function() {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
@@ -1572,16 +1572,16 @@ describe('test TokenAuction', function () {
 
             await contract.call('bid', [0, 12, 5], {caller: bob, amount: '60'});
 
-            await contract.call('setTime', [222223], {caller: alice});
+            await contract.call('setTime', [222221], {caller: alice});
 
-            expect(await contract.query('auctionExpired', [0], {caller: alice})).to.be.deep.equal(['1']);
+            expect(await contract.query('auctionExpired', [0], {caller: alice})).to.be.deep.equal(['0']);
 
             expect(
                 contract.call('collectSeller', [0], {caller: alice})
             ).to.be.rejectedWith('revert');
         });
 
-        it('fails to collect twice', async function() {
+        it('fails to collect (as a seller) twice', async function() {
             await deployer.sendToken(alice.address, '1000000', testTokenId);
             await alice.receiveAll();
 
