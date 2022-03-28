@@ -33,4 +33,4 @@ some tests occasionally failing. In such cases:
 ## IMPORTANT - Node timestamp hack
 
 Since the node's timestamp cannot be set reliably, for testing purposes the contract uses a variable (which can be set) in place of the real block timestamp.
-In order to obtain the production-ready contract code, simply comment and uncomment the lines as stated in SunkCost.solpp.
+In order to obtain the production-ready contract code, simply comment and uncomment the lines as stated in TokenAuction.solpp.
